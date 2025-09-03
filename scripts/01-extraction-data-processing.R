@@ -220,7 +220,7 @@ length(unique(min_max_tpcs$curve_ID)) #1
 curves <- rbind(mean_tpcs, ind_tpcs, median_tpcs, min_max_tpcs)
 length(unique(curves$curve_ID))
 
-##378 total curves###
+##378 total curve###
 
 saveRDS(curves, file = here("processed-data", "wild-tpcs-03-09-2025.RdS"))
 
