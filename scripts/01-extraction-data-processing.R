@@ -161,10 +161,54 @@ ind_tpcs <- ind_tpcs %>%
 
 length(unique(ind_tpcs$curve_ID)) #28 ind tpcs ##now 40 #now 47
 
-##371 curves?
 
-#### 8. generate curve IDs for other sample response curves 
+#### 8. generate curve IDs for other sample response curves ####
+#filter datasets that report a median value
 median_tpcs <- data %>%
   filter(!is.na(response_median)) %>%
+  filter(!(response_median == "")) %>%
   filter(is.na(response_mean)) %>%
   filter(is.na(response_ind))
+start_id2 <- max(ind_tpcs$curve_ID, na.rm = TRUE) + 1 #new start_ID
+# curve_IDs for median tpcs
+median_tpcs <- median_tpcs %>%
+  group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group) %>%
+  select(study_ID, species_ID, cohort_ID, curve_type, response_type, sex, treatment_1_group, treatment_2_group,
+         acclim_temp, test_temp, response_median, response_mean, response_ind, everything()) %>%
+  mutate(curve_ID = as.numeric(cur_group_id() + start_id2 - 1)) %>%
+  mutate(response_curve_type = "median") %>%
+  select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
+  ungroup() %>%
+  group_by(curve_ID) %>%
+  filter(n() >= 4) %>%
+  ungroup() %>%
+  mutate(across(c(response_median, test_temp), as.numeric))
+length(unique(median_tpcs$curve_ID)) #3
+
+#filter curves that report min and max value
+min_max_tpcs <- data %>%
+  filter(!is.na(max_response)) %>%
+  filter(!is.na(min_response)) %>%
+  filter(is.na(response_mean)) %>%
+  filter(!(min_response == "")) %>%
+  filter(!(max_response == "")) %>%
+  filter(is.na(response_ind))
+start_id3 <- max(median_tpcs$curve_ID, na.rm = TRUE) + 1 #new start_id
+#curve_IDs for min and max tpcs
+min_max_tpcs <- min_max_tpcs %>%
+  group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group) %>%
+  select(study_ID, species_ID, cohort_ID, curve_type, response_type, sex, treatment_1_group, treatment_2_group,
+         acclim_temp, test_temp, max_response, min_response, response_mean, response_ind, everything()) %>%
+  mutate(curve_ID = as.numeric(cur_group_id() + start_id3 - 1)) %>%
+  mutate(response_curve_type = "min-max") %>%
+  select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
+  ungroup() %>%
+  group_by(curve_ID) %>%
+  filter(n() >= 4) %>%
+  ungroup() %>%
+  mutate(across(c(min_response, max_response, test_temp), as.numeric))
+
+length(unique(min_max_tpcs$curve_ID)) #1
+
+####375 total curves#####
+
