@@ -9,7 +9,7 @@ library(here)
 library(stringr)
 
 #### 2. load most up to date extraction datasheet ####
-filename <- "data_extraction_09-03-2025.csv"
+filename <- "data_extraction-03-09-2025.csv"
 raw_data <- read.csv(here("raw-data", filename))
 
 #### 3. initial data cleaning ####
@@ -44,7 +44,7 @@ data <- data %>%
   filter(if_any(c(response_mean, response_ind, response_mode, response_median, min_response, max_response), ~ !is.na(.)))
 #remove problematic studies
 data <- data %>%
-  filter(!study_ID %in% c("1_0017", "1_0020"))
+  filter(!study_ID == "2_0003")
 
 #### 4. categorize responses into response/trait groups ####
 data <- data %>%
@@ -123,12 +123,11 @@ mean_tpcs <- data %>%
   filter(!is.na(response_mean)) %>%
   group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group, collection_site) %>%
   select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
-         acclim_temp, test_temp, response_mean, response_ind, everything()) %>%
+         acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
   mutate(curve_ID = ifelse(length(unique(cohort_ID)) == n(),
                            as.character(cur_group_id()),
                            paste(cur_group_id(), cohort_ID, sep = "_"))) %>%
   mutate(response_curve_type = "mean") %>%
-  select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
   ungroup() %>%
   group_by(curve_ID) %>%
   filter(n() >= 4) %>%
@@ -136,9 +135,16 @@ mean_tpcs <- data %>%
   ungroup() %>%
   select(-curve_ID) %>%
   rename(curve_ID = id) %>%
+  select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
   mutate(across(c(response_mean, test_temp), as.numeric))
 
-length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 324
+length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 326
+
+# mean_tpcswrong <- mean_tpcs %>%
+#   group_by(curve_ID) %>%
+#   filter(n() < 4)
+
+length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 326
 
 #### 7. generate curve IDs for individual response curves ####
 ind_tpcs <- data %>%
@@ -147,9 +153,9 @@ ind_tpcs <- data %>%
 start_id <- max(mean_tpcs$curve_ID, na.rm = TRUE) + 1
 #assign individual curve_IDs starting from the next available number
 ind_tpcs <- ind_tpcs %>%
-  group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group) %>%
-  select(study_ID, species_ID, cohort_ID, curve_type, response_type, sex, treatment_1_group, treatment_2_group,
-         acclim_temp, test_temp, response_mean, response_ind, everything()) %>%
+  group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group, collection_site) %>%
+  select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
+         acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
   mutate(curve_ID = as.numeric(cur_group_id() + start_id - 1)) %>%
   mutate(response_curve_type = "individual") %>%
   select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
@@ -159,7 +165,7 @@ ind_tpcs <- ind_tpcs %>%
   ungroup() %>%
   mutate(across(c(response_mean, test_temp), as.numeric))
 
-length(unique(ind_tpcs$curve_ID)) #28 ind tpcs ##now 40 #now 47
+length(unique(ind_tpcs$curve_ID)) #28 ind tpcs ##now 40 #now 48
 
 
 #### 8. generate curve IDs for other sample response curves ####
@@ -172,9 +178,9 @@ median_tpcs <- data %>%
 start_id2 <- max(ind_tpcs$curve_ID, na.rm = TRUE) + 1 #new start_ID
 # curve_IDs for median tpcs
 median_tpcs <- median_tpcs %>%
-  group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group) %>%
-  select(study_ID, species_ID, cohort_ID, curve_type, response_type, sex, treatment_1_group, treatment_2_group,
-         acclim_temp, test_temp, response_median, response_mean, response_ind, everything()) %>%
+  group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group, collection_site) %>%
+  select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
+         acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
   mutate(curve_ID = as.numeric(cur_group_id() + start_id2 - 1)) %>%
   mutate(response_curve_type = "median") %>%
   select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
@@ -196,9 +202,9 @@ min_max_tpcs <- data %>%
 start_id3 <- max(median_tpcs$curve_ID, na.rm = TRUE) + 1 #new start_id
 #curve_IDs for min and max tpcs
 min_max_tpcs <- min_max_tpcs %>%
-  group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group) %>%
-  select(study_ID, species_ID, cohort_ID, curve_type, response_type, sex, treatment_1_group, treatment_2_group,
-         acclim_temp, test_temp, max_response, min_response, response_mean, response_ind, everything()) %>%
+  group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group, collection_site) %>%
+  select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
+         acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
   mutate(curve_ID = as.numeric(cur_group_id() + start_id3 - 1)) %>%
   mutate(response_curve_type = "min-max") %>%
   select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
@@ -210,5 +216,12 @@ min_max_tpcs <- min_max_tpcs %>%
 
 length(unique(min_max_tpcs$curve_ID)) #1
 
-####375 total curves#####
+####9. combine dataframes back together and save ####
+curves <- rbind(mean_tpcs, ind_tpcs, median_tpcs, min_max_tpcs)
+length(unique(curves$curve_ID))
+
+##378 total curves###
+
+saveRDS(curves, file = here("processed-data", "wild-tpcs-03-09-2025.RdS"))
+
 
