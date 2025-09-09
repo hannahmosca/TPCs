@@ -9,7 +9,7 @@ library(here)
 library(stringr)
 
 #### 2. load most up to date extraction datasheet ####
-filename <- "data_extraction-03-09-2025.csv"
+filename <- "data_extraction-09-09-2025.csv"
 raw_data <- read.csv(here("raw-data", filename))
 
 #### 3. initial data cleaning ####
@@ -60,13 +60,13 @@ data <- data %>%
     response_type %in% c("excretion-energy-and-metabolism-energy-as-a-percentage-of-food-energy","excess-post-excercise-oxygen-consumption-response","repeat-excess-post-excercise-oxygen-consumption-response","oxygen-uptake","scope-for-growth","consumption-rate","routine-metabolism","RMR","MMR_18h","MMR_1h","recMMR50","maximum ventilation rate", "resting ventilation rate", "metabolic-scope","oxygen-consumption-rate", "log-scope-for-activity", "standard-metabolic-rate", "maximum-metabolic-rate", 
                          "metabolic-rate","absolute-aerobic-scope", "aerobic scope", "whole-oxygen-embryo-consumption", "log-SMR", "mitochondrial-respiration", "log-active-metabolic-rate", "aerobic-scope", "routine-metabolic-rate", "%-maximum-metabolic-scope-of-activity", 
                          "aerobic_scope", "ctmax", "ctmin", "mass-adjusted-resting-metabolic-rate", "resting-oxygen-consumption", "maximum-oxygen-consumption", "active-metabolic-rate", 
-                         "mass-adjusted-maximum-metabolic-rate", "mass-adjusted-absolute-aerobic-scope","oxygen-consumption", "CTmax") ~ "metabolism",
+                         "mass-adjusted-maximum-metabolic-rate", "mass-adjusted-absolute-aerobic-scope","oxygen-consumption", "CTmax", "heart-rate") ~ "metabolism",
     
     # swimming-related categories
     response_type %in% c("%-active-fish","cstart-distance-traveled-in-100-ms","cstart-duration","cstart-turn-angle","total-swimming-time","cumulative-turning-angle","maximum-angular-velocity","activity","Ucrit","burst-swim-speed","u-gait", "distance-moved","recovery-ratio", "minimum-muscle-contraction-time","relative-critical-swimming-speed", "absolute-critical-swimming-speed", 
                          "critical-swimming-speed", "swimming-speed", "swimming-speed-critical-velocity", "U-crit", "critical swimming speed", "optimal swimming speed",
                          "maximum-swimming-speed", "relative-sustained-swimming-speed", "burst-swimming-speed" , 
-                         "relative-routine-swimming-speed", "relative-maximum-swimming-speed", 
+                         "relative-routine-swimming-speed", "relative-maximum-swimming-speed", "routine-swimming-performance",
                          "maximum-burst-speed", "maximum-length-specific-velocity", "swim-up-rate", "maximum-swimming-velocity", 
                          "maximum-length-specific-acceleration", "maximum-undulatory-swimming-speed", 
                          "caudal-fin-beat-frequency-at-maximal-undulatory-swimming-speed", 
@@ -81,7 +81,7 @@ data <- data %>%
                          "hatching-rate", "malformation-rate", "hatch-rate", "time-to-first-hatch", "days-till-hatch",
                          "time-to-50%-hatch", "time-to-100%-hatch", "duration-hatching-period", 
                          "survival-to-hatch", "batch-size", "spawn-duration", "time-to-maturity", 
-                         "mating-success", "fecundity", "hatching-success", "larval-survival", 
+                         "mating-success", "fecundity", "hatching-success", "larval-survival", "proportion-viable-hatch",
                          "reproductive-success", "total-time-following-females", "number-mating-attempts-in-10-min","number-copulations-in-10-min","%-mating-efficiency","copulations/min-following-females") ~ "reproduction",
     
     # feeding-related categories
@@ -97,7 +97,7 @@ data <- data %>%
     response_type %in% c("survival", "survival-rate", "mortality", "%-survival", 
                          "percent-mortality", "gonadsomatic-index") ~ "survival",
     # predation-related categories
-    response_type %in% c("predation-index", "prey-capture-rate", "capture-manuever-time", "prey-capture-probability") ~ "predation",
+    response_type %in% c("predation-index", "handling-time", "prey-capture-rate", "capture-manuever-time", "prey-capture-probability") ~ "predation",
     TRUE ~ response_type
   ))
 
@@ -110,7 +110,7 @@ data <- data %>%
   mutate(habitat = if_else(habitat == "", NA, habitat)) %>%
   mutate(habitat_water = case_when(
     habitat %in% c("ocean", "sound", "marine rockpools", "bay", "sea","marine", "coastal","marine estuary", "intertidal salt marshes",
-                   "gulf", "salt-pond", "fjord", "reef", "intertidal", "harbour") ~ "marine",
+                   "gulf", "salt-pond", "fjord", "reef", "intertidal", "harbour", "marine shelf", "intertidal salt marshes","coastal") ~ "marine",
     habitat %in% c("river", "lake", "swamp", "creek", "pond", "freshwater") ~ "freshwater",
     habitat %in% c("wetlands", "lagoon", "mixed", "estuary", "mangrove creek", "mixed") ~ "brackish",
     TRUE ~ NA  # for the NA ones, should get this information from species later on 
@@ -138,13 +138,13 @@ mean_tpcs <- data %>%
   select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
   mutate(across(c(response_mean, test_temp), as.numeric))
 
-length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 326
+length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 337
 
 # mean_tpcswrong <- mean_tpcs %>%
 #   group_by(curve_ID) %>%
 #   filter(n() < 4)
 
-length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 326
+length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 326 ##now 337
 
 #### 7. generate curve IDs for individual response curves ####
 ind_tpcs <- data %>%
@@ -220,7 +220,7 @@ length(unique(min_max_tpcs$curve_ID)) #1
 curves <- rbind(mean_tpcs, ind_tpcs, median_tpcs, min_max_tpcs)
 length(unique(curves$curve_ID))
 
-##378 total curve###
+##389 total curve###
 
 saveRDS(curves, file = here("processed-data", "wild-tpcs-03-09-2025.RdS"))
 
