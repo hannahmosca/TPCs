@@ -9,7 +9,7 @@ library(here)
 library(stringr)
 
 #### 2. load most up to date extraction datasheet ####
-filename <- "data_extraction-09-09-2025.csv"
+filename <- "data_extraction-10-09-2025.csv"
 raw_data <- read.csv(here("raw-data", filename))
 
 #### 3. initial data cleaning ####
@@ -138,13 +138,13 @@ mean_tpcs <- data %>%
   select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
   mutate(across(c(response_mean, test_temp), as.numeric))
 
-length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 337
+length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 339
 
 # mean_tpcswrong <- mean_tpcs %>%
 #   group_by(curve_ID) %>%
 #   filter(n() < 4)
 
-length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 326 ##now 337
+length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 326 ##now 339
 
 #### 7. generate curve IDs for individual response curves ####
 ind_tpcs <- data %>%
@@ -220,8 +220,8 @@ length(unique(min_max_tpcs$curve_ID)) #1
 curves <- rbind(mean_tpcs, ind_tpcs, median_tpcs, min_max_tpcs)
 length(unique(curves$curve_ID))
 
-##389 total curve###
+##391 total curve###
 
-saveRDS(curves, file = here("processed-data", "wild-tpcs-03-09-2025.RdS"))
+saveRDS(curves, file = here("processed-data", "wild-tpcs.RdS"))
 
 
