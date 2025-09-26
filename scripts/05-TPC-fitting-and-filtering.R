@@ -1616,7 +1616,7 @@ valid_preds <- valid_preds %>%
 
 
 
-#### . concatanate the  RSS for models to determine best ####
+#### . concatenate the  RSS for models to determine best ####
 #first need to rename rss to model_rss in high res
 rss_deutsch_2008_highres <- rss_deutsch_2008_highres %>%
   rename(deutsch_rss = RSS)
