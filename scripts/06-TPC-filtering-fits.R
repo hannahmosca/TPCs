@@ -1,4 +1,21 @@
-#### 
+#### script for filtering models and datasets for analysis ####
+#### load packages and data ####
+####have not done this script yet, left off with the fitted valid data that i have not figured out how to filter yet ###
+rm(list = ls())
+curves <- readRDS(here('processed-data', 'wild-tpcs.RdS'))
+models <- readRDS(here('processed-data', 'all_model_predictions.RDS'))
+
+#### determine best model by RSS ####
+best_rss_models <- models %>%
+  group_by(curve_ID) %>%
+  slice_min(rss, n = 1, with_ties = FALSE) %>%
+  ungroup
+top3_rss_models <- models %>%
+  group_by(curve_ID) %>%
+  slice_min(rss, n = 3, with_ties = FALSE) %>%
+  ungroup
+##this didt work and the flinn model wasnt captured
+
 #sort - after join with valid preds -- group by curve_id and within that sort ot find best model
 rss_5_param_models <- rss_5_param_models %>%
   mutate(best_model = pmap_chr(select(., deutsch_rss:weibull_rss),
