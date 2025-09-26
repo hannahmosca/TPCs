@@ -9,7 +9,7 @@ library(here)
 library(stringr)
 
 #### 2. load most up to date extraction datasheet ####
-filename <- "data_extraction-10-09-2025.csv"
+filename <- "data_extraction_18_09_2025.csv"
 raw_data <- read.csv(here("raw-data", filename))
 
 #### 3. initial data cleaning ####
@@ -17,9 +17,11 @@ data <- raw_data %>%
   filter(if_any(everything(), ~ . != "")) %>% #remove empty rows
   filter(origin == "wild")  #keep wild-origin data only
 rm(raw_data) #save some space in env
+
 #standardize curve type
 data <- data %>%
-  mutate(across(where(is.character), ~na_if(., "n/a"))) %>%
+  mutate(across(where(is.character), ~na_if(.x, "n/a"))) %>%
+  mutate(across(where(is.character), ~na_if(.x, ""))) %>%
   mutate(curve_type = ifelse(curve_type == "accute-exposure",
                              "acute-change",
                              ifelse(curve_type == "acute",
@@ -52,7 +54,7 @@ data <- data %>%
     # somatic growth-related categories
     response_type %in% c("growth-energy-as-a-percentage-of-food-energy","decrease-in-body-weight","length-sgr","SGR","otolith-sgr","growth-efficiency","growth-rate-between-blastopore-closure-and-maximum-tissue-wet-mass","fish-water-composition", "fish-protein-composition","fish-fat-composition","final-growth-rate","relative-daily-growth","standardised-growth-rate","tank-specific-growth-rate","growth efficiency","specific-growth-rate","standardised-energy-intake", "growth-rate", "specific-growth-rate-in-wet-weight", 
                          "specific-growth-rate-in-dry-weight", "specific-growth-rate-in-protein", "total-length", "relative-growth-rate", "daily-increment-in-total-length",
-                         "specific-growth-rate-in-energy", "length-growth-rate", "WGR", "SGR-standard-length", "embyronic-growth-rate", "rate-of-normal-developing-larvae", 
+                         "specific-growth-rate-in-energy", "length-growth-rate", "WGR", "SGR-standard-length", "embyronic-growth-rate", "rate-of-normal-developing-larvae", "linear-growth-rate","gross-growth-efficiency",
                          "LGR", "growth-change-in-mass", "growth-change-in-length", "standardized growth", "instantaneous-rate-of-biomass-gain", "daily-weight-gain", "standardized growth", "growth-rate-body-weight", "specific-growth-rate-weight",
                          "instantaneous-growth-rate-weight", "standard-length","instantaneous-growth-rate-length", "body-comp-moisture-content", "body-comp-protein-content", "body-comp-lipid-conten","body-comp-ash-content", "daily-growth-rate", "standard-growth-rate-weight", "mean-standardised-growth-rate","weight-gain","individual-specific-growth-rate", "growth-rate-length") ~ "growth",
     
@@ -85,7 +87,7 @@ data <- data %>%
                          "reproductive-success", "total-time-following-females", "number-mating-attempts-in-10-min","number-copulations-in-10-min","%-mating-efficiency","copulations/min-following-females") ~ "reproduction",
     
     # feeding-related categories
-    response_type %in% c("energy-content","maximum-ration-level","faecal production","faeces-energy-as-a-percentage-of-food-energy","feeding rate","food-conversion-efficiency","feed-efficiency","feed-conversion-ratio", "feed-absorption-efficiency-in-dry-weight","ingestion-rate", "conversion-efficiency","absorption-efficiency", "absorption-rate", 
+    response_type %in% c("energy-content", "daily-specific-feeding-rate", "maximum-ration-level","faecal production","faeces-energy-as-a-percentage-of-food-energy","feeding rate","food-conversion-efficiency","feed-efficiency","feed-conversion-ratio", "feed-absorption-efficiency-in-dry-weight","ingestion-rate", "conversion-efficiency","absorption-efficiency", "absorption-rate", 
                          "feed-absorption-efficiency-in-protein", "feed-absorption-efficiency-in-energy", "daily-food-consumption", "net-conversion-efficiency", 
                          "feed-conversion-efficiency-in-wet-weight", "feed-conversion-efficiency-in-dry-weight", "feeding-rate", 
                          "feed-conversion-efficiency-in-protein", "feed-conversion-efficiency-in-energy", "gross-conversion-efficiency", 
@@ -97,7 +99,7 @@ data <- data %>%
     response_type %in% c("survival", "survival-rate", "mortality", "%-survival", 
                          "percent-mortality", "gonadsomatic-index") ~ "survival",
     # predation-related categories
-    response_type %in% c("predation-index", "handling-time", "prey-capture-rate", "capture-manuever-time", "prey-capture-probability") ~ "predation",
+    response_type %in% c("predation-index", "handling-time", "prey-capture-rate", "capture-manuever-time", "prey-capture-probability", "prey-consumption") ~ "predation",
     TRUE ~ response_type
   ))
 
@@ -111,8 +113,8 @@ data <- data %>%
   mutate(habitat_water = case_when(
     habitat %in% c("ocean", "sound", "marine rockpools", "bay", "sea","marine", "coastal","marine estuary", "intertidal salt marshes",
                    "gulf", "salt-pond", "fjord", "reef", "intertidal", "harbour", "marine shelf", "intertidal salt marshes","coastal") ~ "marine",
-    habitat %in% c("river", "lake", "swamp", "creek", "pond", "freshwater") ~ "freshwater",
-    habitat %in% c("wetlands", "lagoon", "mixed", "estuary", "mangrove creek", "mixed") ~ "brackish",
+    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "freshwater") ~ "freshwater",
+    habitat %in% c("wetlands", "lagoon", "mixed", "estuary", "mangrove creek", "mixed", "brackish") ~ "brackish",
     TRUE ~ NA  # for the NA ones, should get this information from species later on 
   ))
 
@@ -138,17 +140,17 @@ mean_tpcs <- data %>%
   select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
   mutate(across(c(response_mean, test_temp), as.numeric))
 
-length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 339
+length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 373
 
 # mean_tpcswrong <- mean_tpcs %>%
 #   group_by(curve_ID) %>%
 #   filter(n() < 4)
 
-length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 326 ##now 339
 
 #### 7. generate curve IDs for individual response curves ####
 ind_tpcs <- data %>%
-  filter(response_ind != "n/a")
+  filter(response_ind != "n/a")%>%
+  filter(!is.na(response_ind))
 #get where curve_id left off in means
 start_id <- max(mean_tpcs$curve_ID, na.rm = TRUE) + 1
 #assign individual curve_IDs starting from the next available number
@@ -165,7 +167,7 @@ ind_tpcs <- ind_tpcs %>%
   ungroup() %>%
   mutate(across(c(response_mean, test_temp), as.numeric))
 
-length(unique(ind_tpcs$curve_ID)) #28 ind tpcs ##now 40 #now 48
+length(unique(ind_tpcs$curve_ID)) #28 ind tpcs ##now 40 #now 46
 
 
 #### 8. generate curve IDs for other sample response curves ####
@@ -217,10 +219,25 @@ min_max_tpcs <- min_max_tpcs %>%
 length(unique(min_max_tpcs$curve_ID)) #1
 
 ####9. combine dataframes back together and save ####
-curves <- rbind(mean_tpcs, ind_tpcs, median_tpcs, min_max_tpcs)
+curves <- rbind(mean_tpcs, ind_tpcs, median_tpcs)
+##not going to add in the min-max one just get bc i dont know how to compute 2 value / temp #
+#make a response_value category so that you can run stats on all at the same time#
+curves <- curves %>%
+  mutate(response_value = case_when(
+    response_curve_type == "mean" ~ response_mean,
+    response_curve_type == "individual" ~ response_ind,
+    response_curve_type == "median" ~ response_median
+  )) %>%
+  select(curve_ID, study_ID, species_ID, curve_type, response_type, test_temp, response_value, response_curve_type, everything())
+####10. make sure lat/long is numeric ####
+curves <- curves %>%
+  mutate(across(c(response_value, latitude, longitude), as.numeric)) %>%
+  mutate(abs_latitude = abs(latitude))
 length(unique(curves$curve_ID))
 
-##391 total curve###
+
+##422 total datasets, 1 is a max and min one###
+
 
 saveRDS(curves, file = here("processed-data", "wild-tpcs.RdS"))
 
