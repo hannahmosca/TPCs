@@ -126,6 +126,8 @@ rss_deutsch_2008_highres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 )
+rss_deutsch_2008_highres <- rss_deutsch_2008_highres %>%
+  rename(deutsch_rss = RSS)
 #### 3. bierre2_1999 ####
 curve_ids <- unique(high_res_ds$curve_ID)
 # empty containers for fitting loop
@@ -219,6 +221,8 @@ rss_briere2_1999_highres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 )
+rss_briere2_1999_highres <- rss_briere2_1999_highres %>%
+  rename(briere_rss = RSS)
 
 #### 4. hinshelwood_1947####
 curve_ids <- unique(high_res_ds$curve_ID)
@@ -313,6 +317,8 @@ rss_hinshelwood_1947_highres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 )
+rss_hinshelwood_1947_highres <- rss_hinshelwood_1947_highres %>%
+  rename(hinshelwood_rss = RSS)
 #### 5. johnson_lewin_1946####
 curve_ids <- unique(high_res_ds$curve_ID)
 # empty containers for fitting loop
@@ -406,6 +412,8 @@ rss_johnsonlewin_1946_highres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 )
+rss_johnsonlewin_1946_highres <- rss_johnsonlewin_1946_highres %>%
+  rename(johnsonlewin_rss = RSS)
 #### 6. lactin2_1995####
 curve_ids <- unique(high_res_ds$curve_ID)
 # empty containers for fitting loop
@@ -499,99 +507,8 @@ rss_lactin2_1995_highres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 )
-#### 7. lrf_1991####
-curve_ids <- unique(high_res_ds$curve_ID)
-# empty containers for fitting loop
-fits_list <- vector("list", length(curve_ids))
-names(fits_list) <- curve_ids
-params_list <- list()
-preds_list <- list()
-param_points_list <- list()
-failed_fits <- c()
-
-# loop over each curve
-for (i in seq_along(curve_ids)) {
-  curve_data <- high_res_ds %>% filter(curve_ID == curve_ids[i])
-  
-  # get start values and bounds
-  sv <- get_start_vals(curve_data$test_temp, curve_data$response_value, model_name = 'lrf_1991')
-  if (is.matrix(sv)) sv <- sv[1, ]
-  
-  start_lower <- sv - 10
-  start_upper <- sv + 10
-  
-  lower <- get_lower_lims(curve_data$test_temp, curve_data$response_value, model_name = 'lrf_1991')
-  if (is.matrix(lower)) lower <- lower[1, ]
-  
-  upper <- get_upper_lims(curve_data$test_temp, curve_data$response_value, model_name = 'lrf_1991')
-  if (is.matrix(upper)) upper <- upper[1, ]
-  
-  # fit model
-  fit <- try(
-    nls_multstart(
-      response_value ~ lrf_1991(temp = test_temp, rmax, topt, tmin, tmax),
-      data = curve_data,
-      iter = c(3, 3, 3, 3),
-      start_lower = start_lower,
-      start_upper = start_upper,
-      lower = lower,
-      upper = upper,
-      supp_errors = 'Y',
-      convergence_count = FALSE
-    ),
-    silent = TRUE
-  )
-  
-  fits_list[[i]] <- fit
-  
-  if (!inherits(fit, "try-error")) {
-    #  parameters
-    model_params <- calc_params(fit) %>%
-      mutate(curve_ID = curve_ids[i]) %>%
-      mutate_all(round, 2)
-    params_list[[i]] <- model_params
-    
-    # predictions
-    new_data <- data.frame(test_temp = seq(min(curve_data$test_temp), max(curve_data$test_temp), 0.5))
-    preds <- augment(fit, newdata = new_data) %>%
-      mutate(curve_ID = curve_ids[i])
-    preds_list[[i]] <- preds
-    
-    # parameter points (topt, ctmax)
-    param_points <- model_params %>%
-      select(topt, ctmax) %>%
-      pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
-      mutate(
-        y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
-        curve_ID = curve_ids[i]
-      )
-    param_points_list[[i]] <- param_points
-    
-  } else {
-    failed_fits <- c(failed_fits, curve_ids[i])
-    
-    params_list[[i]] <- tibble()
-    preds_list[[i]] <- tibble()
-    param_points_list[[i]] <- tibble()
-  }
-  
-  cat("Finished curve_ID:", curve_ids[i], "\n")
-}
-print(length(failed_fits))  #
-
-all_params_lrf_1991_highres <- bind_rows(params_list, .id = "list_id")
-all_preds_lrf_1991_highres <- bind_rows(preds_list, .id = "list_id")
-all_param_points_lrf_1991_highres <- bind_rows(param_points_list, .id = "list_id")
-# how good is moodel
-rss_list <- sapply(fits_list, function(fit) {
-  if (inherits(fit, "try-error")) return(NA)
-  deviance(fit)
-}) #NA if failed to fit
-# make df
-rss_lrf_1991_highres <- data.frame(
-  curve_ID = names(fits_list),
-  RSS = rss_list
-)
+rss_lactin2_1995_highres <- rss_lactin2_1995_highres %>%
+  rename(lactin2_rss = RSS)
 #### 8. modified_guassian_2006####
 curve_ids <- unique(high_res_ds$curve_ID)
 # empty containers for fitting loop
@@ -685,6 +602,8 @@ rss_modifiedgaussian_2006_highres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 )
+rss_modifiedgaussian_2006_highres <- rss_modifiedgaussian_2006_highres %>%
+  rename(modifiedgaussian_rss = RSS)
 #### 9. oneil_1972####
 curve_ids <- unique(high_res_ds$curve_ID)
 # empty containers for fitting loop
@@ -778,6 +697,8 @@ rss_oneill_1972_highres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 )
+rss_oneill_1972_highres <- rss_oneill_1972_highres %>%
+  rename(oneill_rss = RSS)
 #### 10. ratkowsky_1983####
 curve_ids <- unique(high_res_ds$curve_ID)
 # empty containers for fitting loop
@@ -871,6 +792,8 @@ rss_ratkowsky_1983_highres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 )
+rss_ratkowsky_1983_highres <- rss_ratkowsky_1983_highres %>%
+  rename(ratkowsky_rss = RSS)
 #### 11. rezende_2019 ####
 curve_ids <- unique(high_res_ds$curve_ID)
 # empty containers for fitting loop
@@ -964,6 +887,8 @@ rss_rezende_2019_highres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 )
+rss_rezende_2019_highres <- rss_rezende_2019_highres %>%
+  rename(rezende_rss = RSS)
 #### 12. spain_1982####
 curve_ids <- unique(high_res_ds$curve_ID)
 # empty containers for fitting loop
@@ -1057,6 +982,8 @@ rss_spain_1982_highres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 )
+rss_spain_1982_highres <- rss_spain_1982_highres %>%
+  rename(spain_rss = RSS)
 #### 13. thomas_2012####
 curve_ids <- unique(high_res_ds$curve_ID)
 # empty containers for fitting loop
@@ -1150,6 +1077,8 @@ rss_thomas_2012_highres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 )
+rss_thomas_2012_highres <- rss_thomas_2012_highres %>%
+  rename(thomas_rss = RSS)
 #### 14. weibull_1995####
 curve_ids <- unique(high_res_ds$curve_ID)
 # empty containers for fitting loop
@@ -1243,7 +1172,8 @@ rss_weibull_1995_highres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 )
-#
+rss_weibull_1995_highres <- rss_weibull_1995_highres %>%
+  rename(weibull_rss = RSS)
 
 #### 15. fitting low rest curves with 3 parameter models in rtpc ####
 #### 3 parameter models for datasets with 4 points ####
@@ -1327,7 +1257,7 @@ for (i in seq_along(curve_ids)) {
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
 }
-print(length(failed_fits))  
+print(length(failed_fits))  #0
 
 all_params_flinn_1991_lowres <- bind_rows(params_list, .id = "list_id")
 all_preds_flinn_1991_lowres <- bind_rows(preds_list, .id = "list_id")
@@ -1343,7 +1273,7 @@ rss_flinn_1991_lowres <- data.frame(
   RSS = rss_list
 )
 rss_flinn_1991_lowres <- rss_flinn_1991_lowres %>%
-  rename(RSS_flinn = RSS)
+  rename(flinn_rss = RSS)
 
 #### gaussian_1984 ####
 curve_ids <- unique(low_res_ds$curve_ID)
@@ -1423,7 +1353,7 @@ for (i in seq_along(curve_ids)) {
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
 }
-print(length(failed_fits))  
+print(length(failed_fits))   #0
 
 all_params_gaussian_1987_lowres <- bind_rows(params_list, .id = "list_id")
 all_preds_gaussian_1987_lowres <- bind_rows(preds_list, .id = "list_id")
@@ -1438,7 +1368,7 @@ rss_gaussian_1987_lowres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list)
 rss_gaussian_1987_lowres <- rss_gaussian_1987_lowres %>%
-  rename(RSS_gaussian = RSS)
+  rename(gaussian_rss = RSS)
 #### fit with quadratic_2008####
 curve_ids <- unique(low_res_ds$curve_ID)
 # empty containers for fitting loop
@@ -1469,7 +1399,7 @@ for (i in seq_along(curve_ids)) {
   # fit model
   fit <- try(
     nls_multstart(
-      response_value ~ gaussian_1987(temp = test_temp, a, b, c),
+      response_value ~ quadratic_2008(temp = test_temp, a, b, c),
       data = curve_data,
       iter = c(4,4,4),
       start_lower = start_lower,
@@ -1517,7 +1447,7 @@ for (i in seq_along(curve_ids)) {
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
 }
-print(length(failed_fits))  #1 failed fit
+print(length(failed_fits))  #0 failed fit
 
 all_params_quadratic_2008_lowres <- bind_rows(params_list, .id = "list_id")
 all_preds_quadratic_2008_lowres <- bind_rows(preds_list, .id = "list_id")
@@ -1532,27 +1462,7 @@ rss_quadratic_2008_lowres <- data.frame(
   curve_ID = names(fits_list),
   RSS = rss_list
 ) %>%
-  rename(RSS_quadratic = RSS)
-
-
-
-
-
-
-
-
-
-ggplot() + 
-  geom_point(
-    data = low_res_ds %>% filter(curve_ID == "371"), 
-    aes(x = test_temp, y = response_value)) +
-  geom_line(data = all_preds_flinn_1991_lowres %>% filter(curve_ID == "371"),
-            aes(x = test_temp, y = .fitted), 
-            linewidth = 1) +
-  geom_point(data = all_param_points_flinn_1991_lowres %>% filter(curve_ID == "371"),
-             aes(x = test_temp, y = y_value),
-             size = 3, color = "red")
-
+  rename(quadratic_rss = RSS)
 
 #### 16. join all predicted values ####
 ###here we got rid of lrf model because the fit was really weird###
@@ -1617,33 +1527,8 @@ valid_preds <- valid_preds %>%
 
 
 #### . concatenate the  RSS for models to determine best ####
-#first need to rename rss to model_rss in high res
-rss_deutsch_2008_highres <- rss_deutsch_2008_highres %>%
-  rename(deutsch_rss = RSS)
-rss_briere2_1999_highres <- rss_briere2_1999_highres %>%
-  rename(briere_rss = RSS)
-rss_hinshelwood_1947_highres <- rss_hinshelwood_1947_highres %>%
-  rename(hinshelwood_rss = RSS)
-rss_johnsonlewin_1946_highres <- rss_johnsonlewin_1946_highres %>%
-  rename(johnsonlewin_rss = RSS)
-rss_lactin2_1995_highres <- rss_lactin2_1995_highres %>%
-  rename(lactin2_rss = RSS)
-rss_lrf_1991_highres <- rss_lrf_1991_highres %>%
-  rename(lrf_rss = RSS)
-rss_modifiedgaussian_2006_highres <- rss_modifiedgaussian_2006_highres %>%
-  rename(modifiedgaussian_rss = RSS)
-rss_oneill_1972_highres <- rss_oneill_1972_highres %>%
-  rename(oneill_rss = RSS)
-rss_ratkowsky_1983_highres <- rss_ratkowsky_1983_highres %>%
-  rename(ratkowsky_rss = RSS)
-rss_rezende_2019_highres <- rss_rezende_2019_highres %>%
-  rename(rezende_rss = RSS)
-rss_spain_1982_highres <- rss_spain_1982_highres %>%
-  rename(spain_rss = RSS)
-rss_thomas_2012_highres <- rss_thomas_2012_highres %>%
-  rename(thomas_rss = RSS)
-rss_weibull_1995_highres <- rss_weibull_1995_highres %>%
-  rename(weibull_rss = RSS)
+
+
 # join dfs
 rss_list_high <- list(
   rss_deutsch_2008_highres,
@@ -1689,7 +1574,8 @@ rss_all_long <- bind_rows(rss_5_long, rss_4_long) %>%
            str_remove("_rss$"))
          
 valid_preds_with_rss <- valid_preds %>%
-  left_join(rss_all_long, by = c("curve_ID", "model"))
+  left_join(rss_all_long, by = c("curve_ID", "model")) %>%
+  distinct()
 
 all_model_predictions <- valid_preds_with_rss 
 saveRDS(all_model_predictions, file = here('processed-data', "all_model_predictions.RDS"))
