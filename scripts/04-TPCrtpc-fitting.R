@@ -12,6 +12,7 @@ install.packages("nls.multstart")
 library(broom)
 library(tidyverse)
 library(dplyr)
+library(here)
 #load the data
 d <- readRDS(here("processed-data","wild-tpcs.RdS")) # this was made in script 01
 
@@ -93,7 +94,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -188,7 +189,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -284,7 +285,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -379,7 +380,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -474,7 +475,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -569,7 +570,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -664,7 +665,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -759,7 +760,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -854,7 +855,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -949,7 +950,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -1044,7 +1045,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -1139,7 +1140,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -1239,7 +1240,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -1335,7 +1336,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -1429,7 +1430,7 @@ for (i in seq_along(curve_ids)) {
     
     # parameter points (topt, ctmax)
     param_points <- model_params %>%
-      select(topt, ctmax) %>%
+      select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
       mutate(
         y_value = predict(fit, newdata = data.frame(test_temp = test_temp)),
@@ -1481,17 +1482,53 @@ high_res_pred_list <- list(
   "briere" = all_preds_briere2_1999_highres,
   "deutsch" = all_preds_deutsch_2008_highres
 )
+
 # for the low res
 low_res_preds_list <- list(
   "flinn" = all_preds_flinn_1991_lowres,
   "gaussian" = all_preds_gaussian_1987_lowres,
   "quadratic" = all_preds_quadratic_2008_lowres
 )
-
+params_list <- list(
+  "spain" = all_params_spain_1982_highres,
+  "weibull" = all_params_weibull_1995_highres,
+  "thomas" = all_params_thomas_2012_highres,
+  "rezende" = all_params_rezende_2019_highres,
+  "ratkowsky" = all_params_ratkowsky_1983_highres,
+  "oneill" = all_params_oneill_1972_highres,
+  "modifiedgaussian" = all_params_modifiedgaussian_2006_highres,
+  "lactin2" = all_params_lactin2_1995_highres,
+  "johnsonlewin" = all_params_johnsonlewin_1946_highres,
+  "hinshelwood" = all_params_hinshelwood_1947_highres,
+  "briere" = all_params_briere2_1999_highres,
+  "deutsch" = all_params_deutsch_2008_highres,
+  "flinn" = all_params_flinn_1991_lowres,
+  "gaussian" = all_params_gaussian_1987_lowres,
+  "quadratic" = all_params_quadratic_2008_lowres
+)
+params_points_list <- list(
+  "spain" = all_param_points_spain_1982_highres,
+  "weibull" = all_param_points_weibull_1995_highres,
+  "thomas" = all_param_points_thomas_2012_highres,
+  "rezende" = all_param_points_rezende_2019_highres,
+  "ratkowsky" = all_param_points_ratkowsky_1983_highres,
+  "oneill" = all_param_points_oneill_1972_highres,
+  "modifiedgaussian" = all_param_points_modifiedgaussian_2006_highres,
+  "lactin2" = all_param_points_lactin2_1995_highres,
+  "johnsonlewin" = all_param_points_johnsonlewin_1946_highres,
+  "hinshelwood" = all_param_points_hinshelwood_1947_highres,
+  "briere" = all_param_points_briere2_1999_highres,
+  "deutsch" = all_param_points_deutsch_2008_highres,
+  "flinn" = all_param_points_flinn_1991_lowres,
+  "gaussian" = all_param_points_gaussian_1987_lowres,
+  "quadratic" = all_param_points_quadratic_2008_lowres
+)
 # Add a model column and bind all rows
 all_preds_long_high <- imap_dfr(high_res_pred_list, ~ .x %>% mutate(model = .y))
 all_preds_long_low <- imap_dfr(low_res_preds_list, ~ .x %>% mutate(model = .y))
 all_preds <- rbind(all_preds_long_high, all_preds_long_low)
+all_params <- imap_dfr(params_list, ~ .x %>% mutate(model = .y))
+all_param_points <- imap_dfr(params_points_list, ~ .x %>% mutate(model = .y))
 
 curves_sd <- curves %>%
   group_by(curve_ID) %>%
@@ -1577,5 +1614,12 @@ valid_preds_with_rss <- valid_preds %>%
   left_join(rss_all_long, by = c("curve_ID", "model")) %>%
   distinct()
 
+
 all_model_predictions <- valid_preds_with_rss 
 saveRDS(all_model_predictions, file = here('processed-data', "all_model_predictions.RDS"))
+
+all_model_params <- all_params 
+saveRDS(all_model_params, file = here('processed-data', "all_model_params.RDS"))
+
+all_ctmin_max_topt_points <- all_param_points 
+saveRDS(all_ctmin_max_topt_points, file = here('processed-data', "all_ctmin_max_topt_points.RDS"))
