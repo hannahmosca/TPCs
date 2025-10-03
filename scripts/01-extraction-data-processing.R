@@ -78,7 +78,7 @@ data <- data %>%
                          "swimming-speed-critical-velocity", "tail-beat-frequency", "maximum-critical-swimming-speed", "max-acceleration", "max-velocity", "max-angular-velocity", "max-angular-acceleration", "u-crit", "spontaneous-swimming-speed") ~ "swimming",
     
     # reproduction-related categories
-    response_type %in% c("spawning-interval","maximum-approach-to-female-speed","condition-factor","gonado-somatic-index","hatch-success","egg-production-per-pair-per-month", "spawns-per-pair-per-month", 
+    response_type %in% c("gonadsomatic-index", "spawning-interval","maximum-approach-to-female-speed","condition-factor","gonado-somatic-index","hatch-success","egg-production-per-pair-per-month", "spawns-per-pair-per-month", 
                          "gonadosomatic-index", "visceralsomatic-index", "fertilization-rate", 
                          "hatching-rate", "malformation-rate", "hatch-rate", "time-to-first-hatch", "days-till-hatch",
                          "time-to-50%-hatch", "time-to-100%-hatch", "duration-hatching-period", 
@@ -97,7 +97,7 @@ data <- data %>%
     
     # survival-related categories
     response_type %in% c("survival", "survival-rate", "mortality", "%-survival", 
-                         "percent-mortality", "gonadsomatic-index") ~ "survival",
+                         "percent-mortality") ~ "survival",
     # predation-related categories
     response_type %in% c("predation-index", "handling-time", "prey-capture-rate", "capture-manuever-time", "prey-capture-probability", "prey-consumption") ~ "predation",
     TRUE ~ response_type
@@ -235,6 +235,22 @@ curves <- curves %>%
   mutate(abs_latitude = abs(latitude))
 length(unique(curves$curve_ID))
 
+##### also want to handle survival and mortality curves in this script #### 
+curves <- curves %>%
+  mutate(
+    # convert to survival only for mortality curves
+    response_value = if_else(
+      response_type %in% c("percent-mortality", "mortality"),
+      100 - response_value,   # percent mortality → percent survival
+      response_value          # leave all other response_values unchanged
+    ),
+    #update the response_type to reflect the change
+    response_type = if_else(
+      response_type %in% c("percent-mortality", "mortality"),
+      "percent-survival",
+      response_type
+    )
+  )
 
 ##422 total datasets, 1 is a max and min one###
 
