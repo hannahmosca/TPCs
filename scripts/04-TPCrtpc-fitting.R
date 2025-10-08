@@ -36,7 +36,7 @@ length(unique(low_res_ds$curve_ID)) #222
 
 #### 2. Fitting high res curves with all 4 parameter models in rtpc
 #### bierre2_1999 ####
-curve_ids <- unique(high_res_ds$curve_ID)
+curve_ids <- curve_IDs
 # empty containers for fitting loop
 fits_list <- vector("list", length(curve_ids))
 names(fits_list) <- curve_ids
@@ -45,7 +45,7 @@ preds_list <- list()
 param_points_list <- list()
 failed_fits <- c()
 fits_tidy_list <- list()
-
+resids_list <- list()
 # loop over each curve
 for (i in seq_along(curve_ids)) {
   curve_data <- high_res_ds %>% filter(curve_ID == curve_ids[i])
@@ -109,14 +109,18 @@ for (i in seq_along(curve_ids)) {
       mutate(curve_ID = curve_ids[i])
     fits_tidy_list[[i]] <- fit_stats
     
+    resids_list[[i]] <- augment(fit) %>%
+      mutate(curve_ID = curve_ids[i])
+
   } else {
     failed_fits <- c(failed_fits, curve_ids[i])
     
-    params_list[[i]] <- tibble()
-    preds_list[[i]] <- tibble()
-    param_points_list[[i]] <- tibble()
-    fits_list[[i]] <- tibble()
-    fits_tidy_list[[i]] <- tibble()
+    params_list[[i]] <- NULL
+    preds_list[[i]] <- NULL
+    param_points_list[[i]] <- NULL
+    fits_list[[i]] <- NULL
+    fits_tidy_list[[i]] <- NULL
+    resids_list[[i]] <- NULL
   }
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
@@ -124,12 +128,13 @@ for (i in seq_along(curve_ids)) {
 print(length(failed_fits))  #0
 # combine results
 all_fits_briere2_1999_highres <- bind_rows(fits_tidy_list, .id = "list_id")
+all_resids_briere2_1999_highres <- bind_rows(resids_list, .id = "list_id")
 all_params_briere2_1999_highres <- bind_rows(params_list, .id = "list_id")
 all_preds_briere2_1999_highres <- bind_rows(preds_list, .id = "list_id")
 all_param_points_briere2_1999_highres <- bind_rows(param_points_list, .id = "list_id")
 
 #### hinshelwood_1947####
-curve_ids <- unique(high_res_ds$curve_ID)
+curve_ids <- curve_IDs
 # empty containers for fitting loop
 fits_list <- vector("list", length(curve_ids))
 names(fits_list) <- curve_ids
@@ -138,6 +143,7 @@ preds_list <- list()
 param_points_list <- list()
 failed_fits <- c()
 fits_tidy_list <- list()
+resids_list <- list()
 # loop over each curve
 for (i in seq_along(curve_ids)) {
   curve_data <- high_res_ds %>% filter(curve_ID == curve_ids[i])
@@ -202,14 +208,17 @@ for (i in seq_along(curve_ids)) {
       mutate(curve_ID = curve_ids[i])
     fits_tidy_list[[i]] <- fit_stats
     
+    resids_list[[i]] <- augment(fit) %>%
+      mutate(curve_ID = curve_ids[i])
   } else {
     failed_fits <- c(failed_fits, curve_ids[i])
-    
-    params_list[[i]] <- tibble()
-    preds_list[[i]] <- tibble()
-    param_points_list[[i]] <- tibble()
-    fits_list[[i]] <- tibble()
-    fits_tidy_list[[i]] <- tibble()
+  
+    params_list[[i]] <- NULL
+    preds_list[[i]] <- NULL
+    param_points_list[[i]] <- NULL
+    fits_list[[i]] <- NULL
+    fits_tidy_list[[i]] <- NULL
+    resids_list[[i]] <- NULL
   }
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
@@ -217,12 +226,13 @@ for (i in seq_along(curve_ids)) {
 print(length(failed_fits))  #0
 # combine results
 all_fits_hinshelwood_1947_highres <- bind_rows(fits_tidy_list, .id = "list_id")
+all_resids_hinshelwood_1947_highres <- bind_rows(resids_list, .id = "list_id")
 all_params_hinshelwood_1947_highres <- bind_rows(params_list, .id = "list_id")
 all_preds_hinshelwood_1947_highres <- bind_rows(preds_list, .id = "list_id")
 all_param_points_hinshelwood_1947_highres <- bind_rows(param_points_list, .id = "list_id")
 
 #### johnson_lewin_1946####
-curve_ids <- unique(high_res_ds$curve_ID)
+curve_ids <- curve_IDs
 # empty containers for fitting loop
 fits_list <- vector("list", length(curve_ids))
 names(fits_list) <- curve_ids
@@ -231,7 +241,7 @@ preds_list <- list()
 param_points_list <- list()
 failed_fits <- c()
 fits_tidy_list <- list()
-
+resids_list <- list()
 # loop over each curve
 for (i in seq_along(curve_ids)) {
   curve_data <- high_res_ds %>% filter(curve_ID == curve_ids[i])
@@ -295,14 +305,17 @@ for (i in seq_along(curve_ids)) {
       mutate(curve_ID = curve_ids[i])
     fits_tidy_list[[i]] <- fit_stats
     
+    resids_list[[i]] <- augment(fit) %>%
+      mutate(curve_ID = curve_ids[i])
+    
   } else {
     failed_fits <- c(failed_fits, curve_ids[i])
-    
-    params_list[[i]] <- tibble()
-    preds_list[[i]] <- tibble()
-    param_points_list[[i]] <- tibble()
-    fits_list[[i]] <- tibble()
-    fits_tidy_list[[i]] <- tibble()
+    params_list[[i]] <- NULL
+    preds_list[[i]] <- NULL
+    param_points_list[[i]] <- NULL
+    fits_list[[i]] <- NULL
+    fits_tidy_list[[i]] <- NULL
+    resids_list[[i]] <- NULL
   }
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
@@ -310,12 +323,13 @@ for (i in seq_along(curve_ids)) {
 print(length(failed_fits))  #0
 # combine results
 all_fits_johnsonlewin_1946_highres <- bind_rows(fits_tidy_list, .id = "list_id")
+all_resids_johnsonlewin_1946_highres <- bind_rows(resids_list, .id = "list_id")
 all_params_johnsonlewin_1946_highres <- bind_rows(params_list, .id = "list_id")
 all_preds_johnsonlewin_1946_highres <- bind_rows(preds_list, .id = "list_id")
 all_param_points_johnsonlewin_1946_highres <- bind_rows(param_points_list, .id = "list_id")
 
 #### 6. lactin2_1995####
-curve_ids <- unique(high_res_ds$curve_ID)
+curve_ids <- curve_IDs
 # empty containers for fitting loop
 fits_list <- vector("list", length(curve_ids))
 names(fits_list) <- curve_ids
@@ -324,7 +338,7 @@ preds_list <- list()
 param_points_list <- list()
 failed_fits <- c()
 fits_tidy_list <- list()
-
+resids_list <- list()
 # loop over each curve
 for (i in seq_along(curve_ids)) {
   curve_data <- high_res_ds %>% filter(curve_ID == curve_ids[i])
@@ -388,14 +402,17 @@ for (i in seq_along(curve_ids)) {
       mutate(curve_ID = curve_ids[i])
     fits_tidy_list[[i]] <- fit_stats
     
+    resids_list[[i]] <- augment(fit) %>%
+      mutate(curve_ID = curve_ids[i])
+    
   } else {
     failed_fits <- c(failed_fits, curve_ids[i])
-    
-    params_list[[i]] <- tibble()
-    preds_list[[i]] <- tibble()
-    param_points_list[[i]] <- tibble()
-    fits_list[[i]] <- tibble()
-    fits_tidy_list[[i]] <- tibble()
+    params_list[[i]] <- NULL
+    preds_list[[i]] <- NULL
+    param_points_list[[i]] <- NULL
+    fits_list[[i]] <- NULL
+    fits_tidy_list[[i]] <- NULL
+    resids_list[[i]] <- NULL
   }
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
@@ -403,13 +420,14 @@ for (i in seq_along(curve_ids)) {
 print(length(failed_fits))  #0
 # combine results
 all_fits_lactin2_1995_highres <- bind_rows(fits_tidy_list, .id = "list_id")
+all_resids_lactin2_1995_highres <- bind_rows(resids_list, .id = "list_id")
 all_params_lactin2_1995_highres <- bind_rows(params_list, .id = "list_id")
 all_preds_lactin2_1995_highres <- bind_rows(preds_list, .id = "list_id")
 all_param_points_lactin2_1995_highres <- bind_rows(param_points_list, .id = "list_id")
 
 
 #### 9. oneil_1972####
-curve_ids <- unique(high_res_ds$curve_ID)
+curve_ids <- curve_IDs
 # empty containers for fitting loop
 fits_list <- vector("list", length(curve_ids))
 names(fits_list) <- curve_ids
@@ -418,7 +436,7 @@ preds_list <- list()
 param_points_list <- list()
 failed_fits <- c()
 fits_tidy_list <- list()
-
+resids_list <- list()
 # loop over each curve
 for (i in seq_along(curve_ids)) {
   curve_data <- high_res_ds %>% filter(curve_ID == curve_ids[i])
@@ -482,27 +500,30 @@ for (i in seq_along(curve_ids)) {
       mutate(curve_ID = curve_ids[i])
     fits_tidy_list[[i]] <- fit_stats
     
+    resids_list[[i]] <- augment(fit) %>%
+      mutate(curve_ID = curve_ids[i])
+    
   } else {
     failed_fits <- c(failed_fits, curve_ids[i])
-    
-    params_list[[i]] <- tibble()
-    preds_list[[i]] <- tibble()
-    param_points_list[[i]] <- tibble()
-    fits_list[[i]] <- tibble()
-    fits_tidy_list[[i]] <- tibble()
+    params_list[[i]] <- NULL
+    preds_list[[i]] <- NULL
+    param_points_list[[i]] <- NULL
+    fits_list[[i]] <- NULL
+    fits_tidy_list[[i]] <- NULL
+    resids_list[[i]] <- NULL
   }
-  
   cat("Finished curve_ID:", curve_ids[i], "\n")
 }
 print(length(failed_fits))  #0
 # combine results
 all_fits_oneill_highres <- bind_rows(fits_tidy_list, .id = "list_id")
+all_resids_oneill_1972_highres <- bind_rows(resids_list, .id = "list_id")
 all_params_oneill_1972_highres <- bind_rows(params_list, .id = "list_id")
 all_preds_oneill_1972_highres <- bind_rows(preds_list, .id = "list_id")
 all_param_points_oneill_1972_highres <- bind_rows(param_points_list, .id = "list_id")
 
 #### ratkowsky_1983####
-curve_ids <- unique(high_res_ds$curve_ID)
+curve_ids <- curve_IDs
 # empty containers for fitting loop
 fits_list <- vector("list", length(curve_ids))
 names(fits_list) <- curve_ids
@@ -511,7 +532,7 @@ preds_list <- list()
 param_points_list <- list()
 failed_fits <- c()
 fits_tidy_list <- list()
-
+resids_list <- list()
 # loop over each curve
 for (i in seq_along(curve_ids)) {
   curve_data <- high_res_ds %>% filter(curve_ID == curve_ids[i])
@@ -575,27 +596,31 @@ for (i in seq_along(curve_ids)) {
     mutate(curve_ID = curve_ids[i])
   fits_tidy_list[[i]] <- fit_stats
   
+  resids_list[[i]] <- augment(fit) %>%
+    mutate(curve_ID = curve_ids[i])
+  
  } else {
   failed_fits <- c(failed_fits, curve_ids[i])
-  
-  params_list[[i]] <- tibble()
-  preds_list[[i]] <- tibble()
-  param_points_list[[i]] <- tibble()
-  fits_list[[i]] <- tibble()
-  fits_tidy_list[[i]] <- tibble()
-}
+  params_list[[i]] <- NULL
+  preds_list[[i]] <- NULL
+  param_points_list[[i]] <- NULL
+  fits_list[[i]] <- NULL
+  fits_tidy_list[[i]] <- NULL
+  resids_list[[i]] <- NULL
+ }
 
 cat("Finished curve_ID:", curve_ids[i], "\n")
 }
 print(length(failed_fits))  #0
 # combine results
 all_fits_ratkowsky_highres <- bind_rows(fits_tidy_list, .id = "list_id")
+all_resids_ratkowsky_1983_highres <- bind_rows(resids_list, .id = "list_id")
 all_params_ratkowsky_1983_highres <- bind_rows(params_list, .id = "list_id")
 all_preds_ratkowsky_1983_highres <- bind_rows(preds_list, .id = "list_id")
 all_param_points_ratkowsky_1983_highres <- bind_rows(param_points_list, .id = "list_id")
 
 #### rezende_2019 ####
-curve_ids <- unique(high_res_ds$curve_ID)
+curve_ids <- curve_IDs
 # empty containers for fitting loop
 fits_list <- vector("list", length(curve_ids))
 names(fits_list) <- curve_ids
@@ -604,7 +629,7 @@ preds_list <- list()
 param_points_list <- list()
 failed_fits <- c()
 fits_tidy_list <- list()
-
+resids_list <- list()
 # loop over each curve
 for (i in seq_along(curve_ids)) {
   curve_data <- high_res_ds %>% filter(curve_ID == curve_ids[i])
@@ -668,14 +693,17 @@ for (i in seq_along(curve_ids)) {
       mutate(curve_ID = curve_ids[i])
     fits_tidy_list[[i]] <- fit_stats
     
+    resids_list[[i]] <- augment(fit) %>%
+      mutate(curve_ID = curve_ids[i])
+    
   } else {
     failed_fits <- c(failed_fits, curve_ids[i])
-    
-    params_list[[i]] <- tibble()
-    preds_list[[i]] <- tibble()
-    param_points_list[[i]] <- tibble()
-    fits_list[[i]] <- tibble()
-    fits_tidy_list[[i]] <- tibble()
+    params_list[[i]] <- NULL
+    preds_list[[i]] <- NULL
+    param_points_list[[i]] <- NULL
+    fits_list[[i]] <- NULL
+    fits_tidy_list[[i]] <- NULL
+    resids_list[[i]] <- NULL
   }
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
@@ -683,12 +711,13 @@ for (i in seq_along(curve_ids)) {
 print(length(failed_fits))  #0
 # combine results
 all_fits_rezende_2019_highres <- bind_rows(fits_tidy_list, .id = "list_id")
+all_resids_rezende_2019_highres <- bind_rows(resids_list, .id = "list_id")
 all_params_rezende_2019_highres <- bind_rows(params_list, .id = "list_id")
 all_preds_rezende_2019_highres <- bind_rows(preds_list, .id = "list_id")
 all_param_points_rezende_2019_highres <- bind_rows(param_points_list, .id = "list_id")
 
 #### Spain_1982####
-curve_ids <- unique(high_res_ds$curve_ID)
+curve_ids <- curve_IDs
 # empty containers for fitting loop
 fits_list <- vector("list", length(curve_ids))
 names(fits_list) <- curve_ids
@@ -697,7 +726,7 @@ preds_list <- list()
 param_points_list <- list()
 failed_fits <- c()
 fits_tidy_list <- list()
-
+resids_list <- list()
 # loop over each curve
 for (i in seq_along(curve_ids)) {
   curve_data <- high_res_ds %>% filter(curve_ID == curve_ids[i])
@@ -760,14 +789,17 @@ for (i in seq_along(curve_ids)) {
       mutate(curve_ID = curve_ids[i])
     fits_tidy_list[[i]] <- fit_stats
     
+    resids_list[[i]] <- augment(fit) %>%
+      mutate(curve_ID = curve_ids[i])
+    
   } else {
     failed_fits <- c(failed_fits, curve_ids[i])
-    
-    params_list[[i]] <- tibble()
-    preds_list[[i]] <- tibble()
-    param_points_list[[i]] <- tibble()
-    fits_list[[i]] <- tibble()
-    fits_tidy_list[[i]] <- tibble()
+    params_list[[i]] <- NULL
+    preds_list[[i]] <- NULL
+    param_points_list[[i]] <- NULL
+    fits_list[[i]] <- NULL
+    fits_tidy_list[[i]] <- NULL
+    resids_list[[i]] <- NULL
   }
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
@@ -775,12 +807,13 @@ for (i in seq_along(curve_ids)) {
 print(length(failed_fits))  #0
 # combine results
 all_fits_spain_1982_highres <- bind_rows(fits_tidy_list, .id = "list_id")
+all_resids_spain_1982_highres <- bind_rows(resids_list, .id = "list_id")
 all_params_spain_1982_highres <- bind_rows(params_list, .id = "list_id")
 all_preds_spain_1982_highres <- bind_rows(preds_list, .id = "list_id")
 all_param_points_spain_1982_highres <- bind_rows(param_points_list, .id = "list_id")
 
 #### thomas_2012####
-curve_ids <- unique(high_res_ds$curve_ID)
+curve_ids <- curve_IDs
 # empty containers for fitting loop
 fits_list <- vector("list", length(curve_ids))
 names(fits_list) <- curve_ids
@@ -789,7 +822,7 @@ preds_list <- list()
 param_points_list <- list()
 failed_fits <- c()
 fits_tidy_list <- list()
-
+resids_list <- list()
 # loop over each curve
 for (i in seq_along(curve_ids)) {
   curve_data <- high_res_ds %>% filter(curve_ID == curve_ids[i])
@@ -853,14 +886,16 @@ for (i in seq_along(curve_ids)) {
       mutate(curve_ID = curve_ids[i])
     fits_tidy_list[[i]] <- fit_stats
     
-  } else {
-    failed_fits <- c(failed_fits, curve_ids[i])
+    resids_list[[i]] <- augment(fit) %>%
+      mutate(curve_ID = curve_ids[i])
     
-    params_list[[i]] <- tibble()
-    preds_list[[i]] <- tibble()
-    param_points_list[[i]] <- tibble()
-    fits_list[[i]] <- tibble()
-    fits_tidy_list[[i]] <- tibble()
+  } else {
+    params_list[[i]] <- NULL
+    preds_list[[i]] <- NULL
+    param_points_list[[i]] <- NULL
+    fits_list[[i]] <- NULL
+    fits_tidy_list[[i]] <- NULL
+    resids_list[[i]] <- NULL
   }
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
@@ -868,12 +903,13 @@ for (i in seq_along(curve_ids)) {
 print(length(failed_fits))  #0
 # combine results
 all_fits_thomas_2012_highres <- bind_rows(fits_tidy_list, .id = "list_id")
+all_resids_thomas_2012_highres <- bind_rows(resids_list, .id = "list_id")
 all_params_thomas_2012_highres <- bind_rows(params_list, .id = "list_id")
 all_preds_thomas_2012_highres <- bind_rows(preds_list, .id = "list_id")
 all_param_points_thomas_2012_highres <- bind_rows(param_points_list, .id = "list_id")
 
 #### Weibull_1995####
-curve_ids <- unique(high_res_ds$curve_ID)
+curve_ids <- curve_IDs
 # empty containers for fitting loop
 fits_list <- vector("list", length(curve_ids))
 names(fits_list) <- curve_ids
@@ -882,7 +918,7 @@ preds_list <- list()
 param_points_list <- list()
 failed_fits <- c()
 fits_tidy_list <- list()
-
+resids_list <- list()
 # loop over each curve
 for (i in seq_along(curve_ids)) {
   curve_data <- high_res_ds %>% filter(curve_ID == curve_ids[i])
@@ -946,14 +982,17 @@ for (i in seq_along(curve_ids)) {
       mutate(curve_ID = curve_ids[i])
     fits_tidy_list[[i]] <- fit_stats
     
+    resids_list[[i]] <- augment(fit) %>%
+      mutate(curve_ID = curve_ids[i])
+    
   } else {
     failed_fits <- c(failed_fits, curve_ids[i])
-    
-    params_list[[i]] <- tibble()
-    preds_list[[i]] <- tibble()
-    param_points_list[[i]] <- tibble()
-    fits_list[[i]] <- tibble()
-    fits_tidy_list[[i]] <- tibble()
+    params_list[[i]] <- NULL
+    preds_list[[i]] <- NULL
+    param_points_list[[i]] <- NULL
+    fits_list[[i]] <- NULL
+    fits_tidy_list[[i]] <- NULL
+    resids_list[[i]] <- NULL
   }
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
@@ -961,6 +1000,7 @@ for (i in seq_along(curve_ids)) {
 print(length(failed_fits))  #0
 # combine results
 all_fits_weibull_1995_highres <- bind_rows(fits_tidy_list, .id = "list_id")
+all_resids_weibull_1995_highres <- bind_rows(resids_list, .id = "list_id")
 all_params_weibull_1995_highres <- bind_rows(params_list, .id = "list_id")
 all_preds_weibull_1995_highres <- bind_rows(preds_list, .id = "list_id")
 all_param_points_weibull_1995_highres <- bind_rows(param_points_list, .id = "list_id")
@@ -969,9 +1009,8 @@ all_param_points_weibull_1995_highres <- bind_rows(param_points_list, .id = "lis
 #### 3 parameter models for datasets with 4 points ####
 #any with 4+ points will be attempted with as many models on rtpc that fit 4 points 
 # only 3 models have 3 parameters -- gaussian_1989, and quadratic_2008
-curve_ids <- unique(d$curve_ID)
+curve_ids <- curve_IDs
 #### gaussian_1984 ####
-curve_ids <- unique(d$curve_ID) # empty containers for fitting loop
 fits_list <- vector("list", length(curve_ids))
 names(fits_list) <- curve_ids
 params_list <- list()
@@ -979,7 +1018,7 @@ preds_list <- list()
 param_points_list <- list()
 failed_fits <- c()
 fits_tidy_list <- list()
-
+resids_list <- list()
 # loop over each curve
 for (i in seq_along(curve_ids)) {
   curve_data <- d %>% filter(curve_ID == curve_ids[i])
@@ -1043,14 +1082,17 @@ for (i in seq_along(curve_ids)) {
       mutate(curve_ID = curve_ids[i])
     fits_tidy_list[[i]] <- fit_stats
     
+    resids_list[[i]] <- augment(fit) %>%
+      mutate(curve_ID = curve_ids[i])
+    
   } else {
     failed_fits <- c(failed_fits, curve_ids[i])
-    
-    params_list[[i]] <- tibble()
-    preds_list[[i]] <- tibble()
-    param_points_list[[i]] <- tibble()
-    fits_list[[i]] <- tibble()
-    fits_tidy_list[[i]] <- tibble()
+    params_list[[i]] <- NULL
+    preds_list[[i]] <- NULL
+    param_points_list[[i]] <- NULL
+    fits_list[[i]] <- NULL
+    fits_tidy_list[[i]] <- NULL
+    resids_list[[i]] <- NULL
   }
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
@@ -1058,12 +1100,13 @@ for (i in seq_along(curve_ids)) {
 print(length(failed_fits))  #0
 # combine results
 all_fits_gaussian_1987_all <- bind_rows(fits_tidy_list, .id = "list_id")
+all_resids_gaussian_1987_highres <- bind_rows(resids_list, .id = "list_id")
 all_params_gaussian_1987_all <- bind_rows(params_list, .id = "list_id")
 all_preds_gaussian_1987_all <- bind_rows(preds_list, .id = "list_id")
 all_param_points_gaussian_1987_all <- bind_rows(param_points_list, .id = "list_id")
 
 #### fit with quadratic_2008####
-curve_ids <- unique(d$curve_ID)
+curve_ids <- curve_IDs
 # empty containers for fitting loop
 fits_list <- vector("list", length(curve_ids))
 names(fits_list) <- curve_ids
@@ -1072,7 +1115,7 @@ preds_list <- list()
 param_points_list <- list()
 failed_fits <- c()
 fits_tidy_list <- list()
-
+resids_list <- list()
 # loop over each curve
 for (i in seq_along(curve_ids)) {
   curve_data <- d %>% filter(curve_ID == curve_ids[i])
@@ -1136,14 +1179,17 @@ for (i in seq_along(curve_ids)) {
       mutate(curve_ID = curve_ids[i])
     fits_tidy_list[[i]] <- fit_stats
     
+    resids_list[[i]] <- augment(fit) %>%
+      mutate(curve_ID = curve_ids[i])
+    
   } else {
     failed_fits <- c(failed_fits, curve_ids[i])
-    
-    params_list[[i]] <- tibble()
-    preds_list[[i]] <- tibble()
-    param_points_list[[i]] <- tibble()
-    fits_list[[i]] <- tibble()
-    fits_tidy_list[[i]] <- tibble()
+    params_list[[i]] <- NULL
+    preds_list[[i]] <- NULL
+    param_points_list[[i]] <- NULL
+    fits_list[[i]] <- NULL
+    fits_tidy_list[[i]] <- NULL
+    resids_list[[i]] <- NULL
   }
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
@@ -1151,6 +1197,7 @@ for (i in seq_along(curve_ids)) {
 print(length(failed_fits))  #0
 # combine results
 all_fits_quadratic_2008_all <- bind_rows(fits_tidy_list, .id = "list_id")
+all_resids_quadratic_2008_highres <- bind_rows(resids_list, .id = "list_id")
 all_params_quadratic_2008_all <- bind_rows(params_list, .id = "list_id")
 all_preds_quadratic_2008_all <- bind_rows(preds_list, .id = "list_id")
 all_param_points_quadratic_2008_all <- bind_rows(param_points_list, .id = "list_id")
@@ -1223,12 +1270,28 @@ fits_list_all <- list(
   "gaussian" = all_fits_gaussian_1987_all,
   "quadratic" = all_fits_quadratic_2008_all
 )
+resids_list_all <- list(
+  "spain" = all_resids_spain_1982_resids,
+  "weibull" = all_resids_weibull_1995_highres,
+  "thomas" = all_resids_thomas_2012_highres,
+  "rezende" = all_resids_rezende_2019_highres,
+  "ratkowsky" = all_resids_ratkowsky_highres,
+  "oneill" = all_resids_oneill_highres,
+  "lactin2" = all_resids_lactin2_1995_highres,
+  "johnsonlewin" = all_resids_johnsonlewin_1946_highres,
+  "hinshelwood" = all_resids_hinshelwood_1947_highres,
+  "briere" = all_resids_briere2_1999_highres,
+  "gaussian" = all_resids_gaussian_1987_highres,
+  "quadratic" = all_resids_quadratic_2008_highres
+)
 # Add a model column and bind all rows
 all_preds_long_four <- imap_dfr(four_param_preds, ~ .x %>% mutate(model = .y))
 all_preds_long_three <- imap_dfr(three_params_preds, ~ .x %>% mutate(model = .y))
 all_preds <- rbind(all_preds_long_four, all_preds_long_three)
 all_params <- imap_dfr(params_list, ~ .x %>% mutate(model = .y))
 all_fits <- imap_dfr(fits_list_all, ~ .x %>% mutate(model = .y))
+all_resisds <- imap_dfr(resids_list_all, ~ .x %>% mutate(model = .y))
+
 all_param_points <- imap_dfr(params_points_list, ~ .x %>% mutate(model = .y)) %>%
   pivot_wider(
     id_cols = c(list_id, curve_ID, model),  

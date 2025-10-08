@@ -2,7 +2,7 @@
 #title: TPC-data-characteristics.R
 #author: Hannah Mosca
 #this script ...wha
-
+rm(list=ls())
 #### 1. load packages ####
 library(tidyverse)
 library(here)
@@ -11,17 +11,22 @@ library(stringr)
 
 #### 2. load TPCs and species taxonomy ####
 curves <- readRDS(here("processed-data","wild-tpcs.RdS"))
+taxa <- readRDS(here("processed-data", "taxonomy_up_to_date.RDS"))
 #how many curves?
-length(unique(curves$curve_ID)) #425
+length(unique(curves$curve_ID)) #422
 #how many different studies?
 length(unique(curves$study_ID)) #95
 #how many unique species?
-length(unique(curves$species_ID)) #92
+length(unique(taxa$species_ID)) #91
 ##so i can do a breakdown of the datsets##
 curves_unique <- curves %>%
   group_by(curve_ID) %>%
   slice(1)
 
+
+install.packages("maps")
+library(maps)
+world_map <- map_data("world")
 #### latitude and longitude ####
 ggplot() +
   geom_polygon(data = world_map, aes(x = long, y = lat, group = group), 

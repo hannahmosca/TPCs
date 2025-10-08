@@ -9,7 +9,7 @@ library(here)
 library(stringr)
 
 #### 2. load most up to date extraction datasheet ####
-filename <- "data_extraction_18_09_2025.csv"
+filename <- "data_extraction-08-10-2025.csv"
 raw_data <- read.csv(here("raw-data", filename))
 
 #### 3. initial data cleaning ####
@@ -112,11 +112,19 @@ data <- data %>%
   mutate(habitat = if_else(habitat == "", NA, habitat)) %>%
   mutate(habitat_water = case_when(
     habitat %in% c("ocean", "sound", "marine rockpools", "bay", "sea","marine", "coastal","marine estuary", "intertidal salt marshes",
-                   "gulf", "salt-pond", "fjord", "reef", "intertidal", "harbour", "marine shelf", "intertidal salt marshes","coastal") ~ "marine",
+                   "gulf", "salt-pond", "fjord", "reef", "intertidal", "harbour", "marine shelf","coastal") ~ "marine",
     habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "freshwater") ~ "freshwater",
-    habitat %in% c("wetlands", "lagoon", "mixed", "estuary", "mangrove creek", "mixed", "brackish") ~ "brackish",
+    habitat %in% c("wetlands", "lagoon", "mixed", "estuary", "mangrove creek", "brackish") ~ "brackish",
     TRUE ~ NA  # for the NA ones, should get this information from species later on 
   ))
+data <- data %>%
+  mutate(land_or_sea = case_when(
+    habitat %in% c("ocean", "sound", "marine rockpools", "bay", "sea","marine", "coastal","marine estuary", "intertidal salt marshes",
+                   "gulf", "salt-pond", "fjord", "reef", "intertidal", "harbour", "marine shelf","coastal", "estuary") ~ "oceanic",
+    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "freshwater","wetlands", "lagoon", "mangrove creek", "brackish", "mixed") ~ "terrestrial",
+    TRUE ~ NA
+  ))
+
 
 #### 6. generate curve IDs for mean response curves ####
 
@@ -251,8 +259,29 @@ curves <- curves %>%
       response_type
     )
   )
-
-##422 total datasets, 1 is a max and min one###
+curves <- curves %>%
+  group_by(curve_ID) %>%
+  mutate(
+    # sort unique temps for each curve
+    sorted_temps = list(sort(unique(test_temp))),
+    
+    # count how many temps are at least 1 deg apart
+    n_unique_temps = map_int(sorted_temps, function(temps) {
+      distinct <- temps[1]
+      for (t in temps[-1]) {
+        if (min(abs(t - distinct)) >= 1) {
+          distinct <- c(distinct, t)
+        }
+      }
+      length(distinct)
+    })
+  ) %>%
+  ungroup() %>%
+  select(-sorted_temps) %>%
+  select(n_unique_temps, curve_ID, test_temp, everything()) %>%
+  filter(n_unique_temps > 3)
+length(unique(curves$curve_ID))
+##421 total datasets, 1 is a max and min one###
 
 
 saveRDS(curves, file = here("processed-data", "wild-tpcs.RdS"))
