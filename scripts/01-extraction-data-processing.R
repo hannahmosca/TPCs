@@ -107,21 +107,29 @@ data <- data %>%
 # tidying habitat information
 data <- data %>%
   mutate(habitat = if_else(habitat == "coral reef", "reef", habitat)) %>%
-  mutate(habitat = if_else(habitat == "Marine", "marine", habitat)) %>%
+  mutate(habitat = if_else(habitat == "Marine", "unspecified marine", habitat)) %>%
+  mutate(habitat = if_else(habitat == "brackish", "unspecified brackish", habitat)) %>%
+  mutate(habitat = if_else(habitat == "mixed", "unspecified brackish", habitat)) %>%
+  mutate(habitat = if_else(habitat == "freshwater", "unspecified freshwater", habitat)) %>%
   mutate(habitat = if_else(habitat == "n/a", NA, habitat)) %>%
   mutate(habitat = if_else(habitat == "", NA, habitat)) %>%
+  mutate(habitat = if_else(habitat == "marine", "unspecified marine", habitat)) %>%
+  mutate(habitat = if_else(habitat == "sea", "unspecified marine", habitat)) %>%
+  mutate(habitat = if_else(habitat == "ocean", "unspecified marine", habitat)) %>%
+  
+  
   mutate(habitat_water = case_when(
-    habitat %in% c("ocean", "sound", "marine rockpools", "bay", "sea","marine", "coastal","marine estuary", "intertidal salt marshes",
+    habitat %in% c("sound", "marine rockpools", "bay","unspecified marine", "coastal","marine estuary", "intertidal salt marshes",
                    "gulf", "salt-pond", "fjord", "reef", "intertidal", "harbour", "marine shelf","coastal") ~ "marine",
-    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "freshwater") ~ "freshwater",
-    habitat %in% c("wetlands", "lagoon", "mixed", "estuary", "mangrove creek", "brackish") ~ "brackish",
+    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "unspecified freshwater") ~ "freshwater",
+    habitat %in% c("wetlands", "lagoon", "estuary", "mangrove creek", "unspecified brackish") ~ "brackish",
     TRUE ~ NA  # for the NA ones, should get this information from species later on 
   ))
 data <- data %>%
   mutate(land_or_sea = case_when(
-    habitat %in% c("ocean", "sound", "marine rockpools", "bay", "sea","marine", "coastal","marine estuary", "intertidal salt marshes",
+    habitat %in% c("ocean", "sound", "marine rockpools", "bay", "sea","unspecified marine", "coastal","marine estuary", "intertidal salt marshes",
                    "gulf", "salt-pond", "fjord", "reef", "intertidal", "harbour", "marine shelf","coastal", "estuary") ~ "oceanic",
-    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "freshwater","wetlands", "lagoon", "mangrove creek", "brackish", "mixed") ~ "terrestrial",
+    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "unspecified freshwater","wetlands", "lagoon", "mangrove creek", "unspecified brackish") ~ "terrestrial",
     TRUE ~ NA
   ))
 
