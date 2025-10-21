@@ -37,7 +37,7 @@ optimum_curves <- optimum_check %>%
 
 opt_list <- unique(optimum_curves$curve_ID) #checked these, and am removing '156' and putting it in no-opt
 opt_list <- opt_list[!opt_list %in% 156] ###OPT CURVE LIST###
-adding_to_topt <- c(22, 87, 226, 228, 232, 234, 265, 304, 314, 313, 325, 401, 312, 416, 230, 25, 74, 80, 91, 164, 199, 222, 223, 227, 231, 233, 242, 243, 253, 261, 263, 266, 267, 311, 383, 386, 389, 397, 405, 408, 412) # these are ones i got from ctmin and ctmax and unbounded_NO
+adding_to_topt <- c(80, 22, 87, 226, 228, 232, 234, 265, 304, 314, 313, 325, 401, 312, 416, 230, 74, 91, 164, 199, 222, 223, 227, 231, 233, 242, 243, 253, 261, 263, 266, 311, 383, 386, 389, 397, 405, 408, 412, 71, 63) # these are ones i got from ctmin and ctmax and unbounded_NO
 opt_list <- c(opt_list, adding_to_topt)
 opt_list <- unique(opt_list)
 
@@ -69,7 +69,7 @@ ctmin <- non_opt %>%
 ctmin_only <- unique(ctmin$curve_ID) ##checking ctmin only
 #FINAL CTMIN ONLY LIST#
 ctmin_only_list <- ctmin_only[!ctmin_only %in% c(22, 87, 226, 228, 232, 234, 265, 304, 314, 313, 325, 401, 312, 416, 78)] 
-adding_to_ctmin <- c(150)
+adding_to_ctmin <- c(150, 400)
 ctmin_only_list <- c(ctmin_only_list, adding_to_ctmin)
 
 #CTMAX only datasets
@@ -84,9 +84,9 @@ unbounded_NO <- non_opt %>%
   filter(left_bound == "no") %>%
   filter(right_bound == "no")
 unbounded_NO <- unique(unbounded_NO$curve_ID) 
-unbounded_NO_list <- unbounded_NO[!unbounded_NO %in% c(7, 8, 17, 23, 33, 38, 39, 40, 54, 60, 61, 63, 70, 71, 84, 93, 111, 125, 145, 152, 172, 202, 205, 209, 210, 215, 224, 228, 277, 308, 306, 297, 315, 316, 320, 322, 323, 324, 338, 341, 343, 345, 350, 373, 388, 399, 404, 406, 407, 423, 25, 74, 80, 91, 164, 199, 222, 223, 227, 231, 233, 242, 243, 253, 261, 263, 266, 267, 311, 383, 386, 389, 397, 405, 408, 412, 150)]
+unbounded_NO_list <- unbounded_NO[!unbounded_NO %in% c(80, 7, 8, 17, 23, 33, 38, 39, 40, 54, 60, 61, 63, 70, 71, 84, 93, 111, 125, 145, 152, 172, 202, 205, 209, 210, 215, 224, 228, 277, 308, 306, 297, 315, 316, 320, 322, 323, 324, 338, 341, 343, 345, 350, 373, 388, 399, 404, 406, 407, 423, 25, 74, 91, 164, 199, 222, 223, 227, 231, 233, 242, 243, 253, 261, 263, 266, 267, 311, 383, 386, 389, 397, 405, 408, 412, 150)]
 
-confusing_datasets <- c(78, 36, 55, 56, 185, 186, 7, 8, 17, 23, 33, 38, 39, 40, 54, 60, 61, 63, 70, 71, 84, 93, 111, 125, 145, 152, 172, 202, 205, 209, 210, 215, 224, 277, 308, 306, 297, 315, 316, 320, 322, 323, 324, 338, 341, 343, 345, 350, 373, 388, 399, 404, 406, 407, 423, 99, 97, 176, 278, 307, 393)
+confusing_datasets <- c(78, 36, 55, 56, 7, 8, 17, 23, 33, 38, 39, 40, 54, 60, 61, 70, 84, 93, 111, 125, 145, 152, 172, 202, 205, 209, 210, 215, 224, 277, 308, 306, 297, 315, 316, 320, 322, 323, 324, 338, 341, 343, 345, 350, 373, 388, 399, 404, 406, 407, 423, 176, 278, 307, 12, 34, 66, 25, 267)
 
 #### WORKING WITH OPT DATASETS ####
 ## first sort by boundedness ## i made the closeness to 0 further for this ones....
@@ -110,15 +110,18 @@ ctmin_topt <- opt %>%
   filter(left_bound == "yes") %>%
   filter(right_bound == "no")
 ctmin_topt_list <- unique(ctmin_topt$curve_ID)
-ctmin_topt_list <- ctmin_topt_list[!ctmin_topt_list %in% c(157, 228, 232, 234, 265, 401, 402, 403)]
+ctmin_topt_list <- ctmin_topt_list[!ctmin_topt_list %in% c(253, 80, 309, 25, 157, 228, 232, 234, 265, 401, 402, 403, 20, 22, 76, 366, 367, 409, 34, 66, 400)]
 #ctmax with topt datasets
 ctmax_topt <- opt %>%
   filter(left_bound == "no") %>%
   filter(right_bound == "yes")
 ctmax_topt_list <- unique(ctmax_topt$curve_ID)
-ctmax_topt_list <- ctmax_topt_list[!ctmax_topt_list %in% c(18, 59, 225, 230, 270)]
+ctmax_topt_list <- ctmax_topt_list[!ctmax_topt_list %in% c(18, 59, 225, 230, 270, 173, 361, 362)]
+adding_to_ctmax_topt <- c(185, 186)
+ctmax_topt_list <- c(ctmax_topt_list, adding_to_ctmax_topt)
 
-full <- c(157, 228, 232, 234, 401, 402, 403, 18, 59, 225, 230, 270) #curves i think are full that i got from ctmax opt and ctmin opt
+
+full <- c(309,253, 80, 173, 361, 362, 157, 228, 232, 234, 401, 402, 403, 18, 59, 225, 230, 270, 20, 22, 76, 366, 367, 409) #curves i think are full that i got from ctmax opt and ctmin opt
 
 #ctmin+ctmax+topt full curves#
 breadth <- opt %>%
@@ -127,13 +130,15 @@ breadth <- opt %>%
 breadth_list <- unique(breadth$curve_ID)
 breadth_list <- c(breadth_list, full)
 breadth_list <- unique(breadth_list)
+breadth_list <- breadth_list[!breadth_list %in% c(12)]
+
 
 #unbounded curves
 topt_only <- opt %>%
   filter(left_bound == "no") %>%
   filter(right_bound == "no")
 topt_only <- unique(topt_only$curve_ID)
-topt_only <- topt_only[!topt_only %in% c(99, 97, 176, 278, 307, 393)]
+topt_only <- topt_only[!topt_only %in% c(176, 278, 307, 271)]
 
 
 ### WORKING with unbounded no opt ###
@@ -154,7 +159,7 @@ unbounded_curve_direction <- curves %>%
 increasing_unbounded <- unbounded_curve_direction %>%
   filter(direction == "increasing")
 inc_unbounded_NO_list <- unique(increasing_unbounded$curve_ID)
-add_to_inc <- c(141, 156)
+add_to_inc <- c(141, 156, 271)
 inc_unbounded_NO_list <- c(inc_unbounded_NO_list, add_to_inc)
 decreasing_unbounded <- unbounded_curve_direction %>%
   filter(direction == "decreasing")
@@ -162,8 +167,8 @@ dec_unbounded_NO_list <- unique(decreasing_unbounded$curve_ID)
 dec_unbounded_NO_list <- dec_unbounded_NO_list[!dec_unbounded_NO_list %in% c(141, 156)]
 
 # now i have these vectors that hold all of the curves sorted
-#topt_only, ctmax_only_list, ctmin_only_list, inc_unbounded_NO_list, dec_unbounded_NO_list, confusing_datasets, ctmin_topt_list, ctmax_topt_list, breadth_list
-
+all <- c(topt_only, ctmax_only_list, ctmin_only_list, inc_unbounded_NO_list, dec_unbounded_NO_list, confusing_datasets, ctmin_topt_list, ctmax_topt_list, breadth_list)
+length(unique(all))
 
 ## 
 distinct_curves <- curves %>%
@@ -186,12 +191,12 @@ dataset_types <- distinct_curves %>%
   select(curve_ID, dataset_type, habitat_water) %>%
   distinct() %>%
   mutate(
-    topt = case_when(curve_ID %in% c(topt_only, ctmin_topt_list, ctmax_topt_list, breadth_list) ~ TRUE, TRUE ~ FALSE),
-    thermal_min = case_when(curve_ID %in% c(ctmin_topt_list, ctmin_only_list, breadth_list) ~ TRUE, TRUE ~ FALSE),
-    thermal_max = case_when(curve_ID %in% c(ctmax_topt_list, ctmax_only_list, breadth_list) ~ TRUE, TRUE ~ FALSE),
-    breadth = case_when(curve_ID %in% breadth_list ~ TRUE, TRUE ~ FALSE),
-    increasing_side = case_when(curve_ID %in% c(ctmin_topt_list, ctmin_only_list, breadth_list, inc_unbounded_NO_list) ~ TRUE, TRUE ~ FALSE),
-    decreasing_side = case_when(curve_ID %in% c(ctmax_topt_list, ctmax_only_list, breadth_list, dec_unbounded_NO_list) ~ TRUE, TRUE ~ FALSE)) %>%
+    topt_TF = case_when(curve_ID %in% c(topt_only, ctmin_topt_list, ctmax_topt_list, breadth_list) ~ TRUE, TRUE ~ FALSE),
+    thermal_min_TF = case_when(curve_ID %in% c(ctmin_topt_list, ctmin_only_list, breadth_list) ~ TRUE, TRUE ~ FALSE),
+    thermal_max_TF = case_when(curve_ID %in% c(ctmax_topt_list, ctmax_only_list, breadth_list) ~ TRUE, TRUE ~ FALSE),
+    breadth_TF = case_when(curve_ID %in% breadth_list ~ TRUE, TRUE ~ FALSE),
+    increasing_side_TF = case_when(curve_ID %in% c(ctmin_topt_list, ctmin_only_list, breadth_list, inc_unbounded_NO_list) ~ TRUE, TRUE ~ FALSE),
+    decreasing_side_TF = case_when(curve_ID %in% c(ctmax_topt_list, ctmax_only_list, breadth_list, dec_unbounded_NO_list) ~ TRUE, TRUE ~ FALSE)) %>%
   ungroup()
 
 #make long
@@ -238,7 +243,7 @@ b <- ggplot(summary_counts, aes(x = reorder(parameter, -n_true), y = n_true, fil
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank()
   )
-
+b
 ggsave("dataset_type_by_param_his.pdf", plot = b, path = here("figures"), width = 7, height = 4)
 
 

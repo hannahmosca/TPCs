@@ -20,13 +20,8 @@ d <- readRDS(here("processed-data","wild-tpcs.RdS")) # this was made in script 0
 # TP datasets with 5+ temperatures, calling them 'high res'
 high_res_ds <- d %>%
   group_by(curve_ID) %>%
-  mutate(
-    temp_bin = round(test_temp),
-    n_unique_temps = n_distinct(temp_bin)
-  ) %>%
   filter(n_unique_temps >= 5) %>%
-  ungroup() %>%
-  select(-temp_bin, -n_unique_temps)
+  ungroup()
 length(unique(high_res_ds$curve_ID)) #200
 
 ## TP datasets with 4 temperatures, calling them 'low res'
