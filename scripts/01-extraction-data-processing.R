@@ -9,7 +9,7 @@ library(here)
 library(stringr)
 
 #### 2. load most up to date extraction datasheet ####
-filename <- "data_extraction-08-10-2025.csv"
+filename <- "data_extraction_27_10_2025.csv"
 raw_data <- read.csv(here("raw-data", filename))
 
 #### 3. initial data cleaning ####
@@ -107,29 +107,24 @@ data <- data %>%
 # tidying habitat information
 data <- data %>%
   mutate(habitat = if_else(habitat == "coral reef", "reef", habitat)) %>%
-  mutate(habitat = if_else(habitat == "Marine", "unspecified marine", habitat)) %>%
-  mutate(habitat = if_else(habitat == "brackish", "unspecified brackish", habitat)) %>%
-  mutate(habitat = if_else(habitat == "mixed", "unspecified brackish", habitat)) %>%
-  mutate(habitat = if_else(habitat == "freshwater", "unspecified freshwater", habitat)) %>%
+  mutate(habitat = if_else(habitat == "Marine", "marine", habitat)) %>%
+  mutate(habitat = if_else(habitat == "mixed", "brackish", habitat)) %>%
   mutate(habitat = if_else(habitat == "n/a", NA, habitat)) %>%
   mutate(habitat = if_else(habitat == "", NA, habitat)) %>%
-  mutate(habitat = if_else(habitat == "marine", "unspecified marine", habitat)) %>%
-  mutate(habitat = if_else(habitat == "sea", "unspecified marine", habitat)) %>%
-  mutate(habitat = if_else(habitat == "ocean", "unspecified marine", habitat)) %>%
-  
-  
+  mutate(habitat = if_else(habitat == "sea", "marine", habitat)) %>%
+  mutate(habitat = if_else(habitat == "ocean", "marine", habitat)) %>%
   mutate(habitat_water = case_when(
-    habitat %in% c("sound", "marine rockpools", "bay","unspecified marine", "coastal","marine estuary", "intertidal salt marshes",
-                   "gulf", "salt-pond", "fjord", "reef", "intertidal", "harbour", "marine shelf","coastal") ~ "marine",
-    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "unspecified freshwater") ~ "freshwater",
-    habitat %in% c("wetlands", "lagoon", "estuary", "mangrove creek", "unspecified brackish") ~ "brackish",
+    habitat %in% c("sound", "marine rockpools", "bay", "marine", "coastal","marine estuary", "intertidal salt marshes",
+                   "gulf", "salt-pond", "fjord", "reef", "intertidal", "harbour", "marine shelf") ~ "marine",
+    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "reservoir", "freshwater cove") ~ "freshwater",
+    habitat %in% c("wetlands", "lagoon", "estuary", "mangrove creek") ~ "brackish",
     TRUE ~ NA  # for the NA ones, should get this information from species later on 
   ))
 data <- data %>%
   mutate(land_or_sea = case_when(
-    habitat %in% c("ocean", "sound", "marine rockpools", "bay", "sea","unspecified marine", "coastal","marine estuary", "intertidal salt marshes",
+    habitat %in% c("ocean", "sound", "marine rockpools", "bay", "sea","marine", "coastal","marine estuary", "intertidal salt marshes",
                    "gulf", "salt-pond", "fjord", "reef", "intertidal", "harbour", "marine shelf","coastal", "estuary") ~ "oceanic",
-    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "unspecified freshwater","wetlands", "lagoon", "mangrove creek", "unspecified brackish") ~ "terrestrial",
+    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream","wetlands", "lagoon", "mangrove creek", "reservoir", "freshwater cove") ~ "terrestrial",
     TRUE ~ NA
   ))
 
@@ -140,7 +135,7 @@ data <- data %>%
 mean_tpcs <- data %>%
   filter(!is.na(response_mean)) %>%
   group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group, collection_site) %>%
-  select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
+  dplyr::select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
          acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
   mutate(curve_ID = ifelse(length(unique(cohort_ID)) == n(),
                            as.character(cur_group_id()),
@@ -151,9 +146,9 @@ mean_tpcs <- data %>%
   filter(n() >= 4) %>%
   mutate(id = cur_group_id()) %>%
   ungroup() %>%
-  select(-curve_ID) %>%
+  dplyr::select(-curve_ID) %>%
   rename(curve_ID = id) %>%
-  select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
+  dplyr::select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
   mutate(across(c(response_mean, test_temp), as.numeric))
 
 length(unique(mean_tpcs$curve_ID)) #219 unique curve ids ##now 300 ##now 373
@@ -172,11 +167,11 @@ start_id <- max(mean_tpcs$curve_ID, na.rm = TRUE) + 1
 #assign individual curve_IDs starting from the next available number
 ind_tpcs <- ind_tpcs %>%
   group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group, collection_site) %>%
-  select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
+  dplyr::select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
          acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
   mutate(curve_ID = as.numeric(cur_group_id() + start_id - 1)) %>%
   mutate(response_curve_type = "individual") %>%
-  select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
+  dplyr::select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
   ungroup() %>%
   group_by(curve_ID) %>%
   filter(n() >= 4) %>%
@@ -197,11 +192,11 @@ start_id2 <- max(ind_tpcs$curve_ID, na.rm = TRUE) + 1 #new start_ID
 # curve_IDs for median tpcs
 median_tpcs <- median_tpcs %>%
   group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group, collection_site) %>%
-  select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
+  dplyr::select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
          acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
   mutate(curve_ID = as.numeric(cur_group_id() + start_id2 - 1)) %>%
   mutate(response_curve_type = "median") %>%
-  select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
+  dplyr::select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
   ungroup() %>%
   group_by(curve_ID) %>%
   filter(n() >= 4) %>%
@@ -221,11 +216,11 @@ start_id3 <- max(median_tpcs$curve_ID, na.rm = TRUE) + 1 #new start_id
 #curve_IDs for min and max tpcs
 min_max_tpcs <- min_max_tpcs %>%
   group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group, collection_site) %>%
-  select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
+  dplyr::select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
          acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
   mutate(curve_ID = as.numeric(cur_group_id() + start_id3 - 1)) %>%
   mutate(response_curve_type = "min-max") %>%
-  select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
+  dplyr::select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
   ungroup() %>%
   group_by(curve_ID) %>%
   filter(n() >= 4) %>%
@@ -244,7 +239,7 @@ curves <- curves %>%
     response_curve_type == "individual" ~ response_ind,
     response_curve_type == "median" ~ response_median
   )) %>%
-  select(curve_ID, study_ID, species_ID, curve_type, response_type, test_temp, response_value, response_curve_type, everything())
+  dplyr::select(curve_ID, study_ID, species_ID, curve_type, response_type, test_temp, response_value, response_curve_type, everything())
 ####10. make sure lat/long is numeric ####
 curves <- curves %>%
   mutate(across(c(response_value, latitude, longitude), as.numeric)) %>%
@@ -285,8 +280,8 @@ curves <- curves %>%
     })
   ) %>%
   ungroup() %>%
-  select(-sorted_temps) %>%
-  select(n_unique_temps, curve_ID, test_temp, everything()) %>%
+  dplyr::select(-sorted_temps) %>%
+  dplyr::select(n_unique_temps, curve_ID, test_temp, everything()) %>%
   filter(n_unique_temps > 3)
 length(unique(curves$curve_ID))
 ##421 total datasets, 1 is a max and min one###

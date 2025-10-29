@@ -1,6 +1,10 @@
 # Hannah Mosca # 
 # this script is to subset the cleaned performance datasets into curve types #
 rm(list=ls())
+library(conflicted)
+library(dplyr)
+
+conflict_prefer("select", "dplyr")
 #read in the data
 curves <- readRDS(here('processed-data', 'wild-tpcs.RdS'))
 #### 01.normalize all of the datasets so can work with scaled values ####

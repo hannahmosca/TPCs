@@ -35,10 +35,10 @@ ggplot() +
   geom_polygon(data = world_map, aes(x = long, y = lat, group = group), 
                fill = "lightgrey", color = "white") +
   geom_point(data = curves_unique %>%
-               group_by(study_ID) %>%
+               group_by(latitude, longitude) %>%
                slice(1),
              aes(x = longitude, y = latitude, colour = land_or_sea),
-             size = 2,
+             size = 1.8, alpha = .7,
              position = position_jitter(width = 0.1, height = 0.1)) + 
   theme_minimal() +
   labs(x = "Longitude", y = "Latitude") +
@@ -55,6 +55,8 @@ ggplot() +
     legend.position = "none") +
   scale_color_manual(values = c("oceanic" = "blue3",   
                                 "terrestrial" = "palegreen4"))
+
+
 
 
 
@@ -175,46 +177,60 @@ ggsave("temp_Freq_tested_hist.pdf", plot = freq_tested, path = here("figures"), 
 
 #habitat
 habitat_types <- curves %>%
-  select(curve_ID, study_ID, habitat, habitat_water, land_or_sea) %>%
-  distinct(study_ID, habitat, habitat_water, land_or_sea)
-library(ggplot2)
-library(viridis)
-library(hrbrthemes)
+  dplyr::select(study_ID, habitat, habitat_water, land_or_sea) %>%
+  distinct()
 
-ggplot(habitat_types, aes(fill = habitat, x = habitat_water)) +
-  geom_bar(position="stack") +
-  scale_fill_manual(
-    values = c(
-      "unspecified freshwater" = "green4",
-      "river" = "seagreen1",
-      "lake"= "lightgreen", 
-      "swamp" = "olivedrab2",
-      "creek" = "palegreen4",
-      "pond" = "mediumseagreen",
-      "stream" = "yellowgreen",
-      "unspecified marine" = "darkblue",
-      "sound" = "lightblue2",
-      "marine rockpools" = "paleturquoise2",
-      "bay" = 'lightcyan',
-      "coastal" = "skyblue3",
-      "marine estuary" = "steelblue2",
-      "intertidal salt marshes" = "dodgerblue4",
-      "gulf" = "deepskyblue",
-      "salt-pond" = "cyan",
-      "fjord" = "cornflowerblue",
-      "reef" = "darkcyan",
-      "intertidal" = "blue2",
-      "harbour" = "cadetblue1",
-      "marine shelf" = "darkslategray3",
-      "coastal" = "darkturquoise",
-      "unspecified brackish" = "gold4",
-      "wetlands" = "lemonchiffon",
-      "lagoon" = "goldenrod1",
-      "estuary" = "khaki1",
-      "mangrove creek" =  "darkgoldenrod"
-    )
-  ) +
-  ggtitle("mto") +
-  theme_ipsum() +
-  xlab("")
+habitat_types <- habitat_types %>%
+  group_by(habitat) %>%
+  mutate(count = n()) %>%
+  ungroup() %>%
+  mutate(habitat = factor(habitat, levels = names(sort(tapply(count, habitat, sum), decreasing = FALSE))))
+habitat_types$habitat <- factor(habitat_types$habitat, 
+                                levels = levels(habitat_types$habitat))
 
+habitat_summary <- habitat_types %>%
+  group_by(habitat) %>%
+  summarise(count = n()) %>%
+  ungroup() %>%
+  mutate(perc = count / sum(count) * 100)  # optional: percent
+donut_data <- habitat_types %>%
+  group_by(habitat_water, habitat) %>%   # water_type: freshwater, brackish, marine
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(
+    fraction = count / sum(count),
+    ymax = cumsum(fraction),
+    ymin = lag(ymax, default = 0)
+  )
+
+freshwater_palette <- colorRampPalette(c("#00441b", "forestgreen", "lightgreen"))(8)  # 8 freshwater habitats
+brackish_palette   <- colorRampPalette(c("goldenrod3", "#ffe135", "yellow"))(4)  # 4 brackish habitats
+marine_palette     <- colorRampPalette(c("#003366", "#1f78b4", "lightblue1"))(14) # 14 marine habitats
+my_colors <- c(
+  setNames(freshwater_palette, donut_data$habitat[donut_data$habitat_water == "freshwater"]),
+  setNames(brackish_palette,   donut_data$habitat[donut_data$habitat_water == "brackish"]),
+  setNames(marine_palette,     donut_data$habitat[donut_data$habitat_water == "marine"])
+)
+
+donut_data <- habitat_types %>%
+  group_by(habitat_water, habitat) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  arrange(habitat_water) %>%
+  mutate(
+    fraction = count / sum(count),
+    ymax = cumsum(fraction),
+    ymin = lag(ymax, default = 0),
+    mid = (ymin + ymax) / 2,  # middle of each segment for label placement
+    angle = 90 - 360 * mid,          # mid is the middle of each slice
+    hjust = ifelse(angle < -90, 1, 0), # flip labels on left side
+    angle = ifelse(angle < -90, angle + 180, angle) # rotate upside-down labels
+  )
+
+ggplot(donut_data) +
+  geom_rect(aes(ymin = ymin, ymax = ymax, xmin = 3, xmax = 4, fill = habitat), color = "white") +
+  geom_segment(aes(x = 4, xend = 4.5, y = mid, yend = mid), color = "gray40") +
+  geom_text(aes(x = 4.55, y = mid, label = habitat, angle = angle, hjust = hjust), size = 3) +
+  coord_polar(theta = "y") +
+  xlim(c(0, 5)) +
+  scale_fill_manual(values = my_colors) +
+  theme_void() +
+  theme(legend.position = "none")

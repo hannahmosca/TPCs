@@ -285,7 +285,8 @@ ggplot(data = params_with_curve_info %>%
     y = "Thermal Optimum",
     title = "Scatter of Topt and latitude"
   )
-
+install.packages("lmer4")
+library(lme4)
 #linear mixed effects model with study_ID as random effect
 lm_model <- lmer(topt ~ abs_latitude + (1 | study_ID), 
                   data = params_with_curve_info %>%
@@ -307,7 +308,8 @@ r2(lm_model2)
 plot(residuals(lm_model2))
 qqnorm(resid(lm_model2))
 qqline(resid(lm_model2))
-
+install.packages("ggeffects")
+library(ggeffects)
 preds <- ggpredict(lm_model, terms = "abs_latitude")
 head(preds)
 ggplot() +
