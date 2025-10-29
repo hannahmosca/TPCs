@@ -1,5 +1,6 @@
 ### new script for working with future streams data ###
 #required packages
+rm(list=ls())
 library(ncdf4)
 library(terra)
 library(here)
@@ -27,15 +28,40 @@ layer_names <- format(as.Date(time_values), "%Y-%m-%d")
 names(r_temp1986thr1995) <- layer_names
 names(r_temp1986thr1995) #520 weeks: starting from 1986-01-07 to 1995-12-30
 
-#merge all rasters
-freshwater_r_temp_1982thr1995 <- c(r_temp1982thr1985, r_temp1986thr1995)
-names(freshwater_r_temp_1982thr1995)
-crs(freshwater_r_temp_1982thr1995) 
-ext(freshwater_r_temp_1982thr1995)
-res(freshwater_r_temp_1982thr1995)     
-ncell(freshwater_r_temp_1982thr1995)    
-nlyr(freshwater_r_temp_1982thr1995)    
+## 1996 thr 2005
+file1996thr2005 <- "waterTemp_weekAvg_output_E2O_hist_1996-01-07_to_2005-12-30.nc"
+r_temp1996thr2005 <- rast((here("raw-data", file1996thr2005)), subds = "waterTemperature")
+time_values <- time(r_temp1996thr2005)
+layer_names <- format(as.Date(time_values), "%Y-%m-%d")
+names(r_temp1996thr2005) <- layer_names
+names(r_temp1996thr2005) #520 weeks: starting from 1996-01-07 to 2005-12-30
 
+
+#merge all rasters
+freshwater_r_temp_1982thr2005 <- c(r_temp1982thr1985, r_temp1986thr1995, r_temp1996thr2005)
+names(freshwater_r_temp_1982thr2005)
+crs(freshwater_r_temp_1982thr2005) 
+ext(freshwater_r_temp_1982thr2005)
+res(freshwater_r_temp_1982thr2005)     
+ncell(freshwater_r_temp_1982thr2005)    
+nlyr(freshwater_r_temp_1982thr2005)    
+
+# #change resolution to match SST dataset resolution! wait to do this until i have all the data/its taking too long #
+# res(freshwater_r_temp_1982thr1995) # = 0.08333333 0.08333334, and sst is  = 0.25 0.25
+# #load sst raster
+# filename2 <- "sst.mon.mean.nc" # sst data, 529 monthly means from 
+# sst = rast((here("raw-data", filename2)), subds = "sst")
+# res(sst)
+
+# # Resample the finer freshwater raster to match the SST raster's resolution
+# freshwater_r_temp_1982thr1995_resampled <- terra::resample(
+#   freshwater_r_temp_1982thr1995,  # finer
+#   sst,                            # coarser
+#   method = "bilinear"           
+# )
+# 
+# plot(freshwater_r_temp_1982thr1995_resampled[[1]])
+  
 #my point data
 datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
 curves <- readRDS(here('processed-data', 'wild-tpcs.Rds'))
@@ -127,7 +153,7 @@ temp_monthly <- cbind(
 
 ##now go from kelvin to celius
 temp_monthly <- temp_monthly %>%
-  mutate(across(`1982-01`:`1995-12`, ~ .x - 273.15))
+  mutate(across(`1982-01`:`2005-12`, ~ .x - 273.15))
 
 ###for now, flagging 2_0047, 1_0019 needs to be in marine, 2_0093 is an estuary
 temp_wide_unflagged <- temp_monthly %>%
@@ -135,11 +161,11 @@ temp_wide_unflagged <- temp_monthly %>%
 freshwater_temperatures <- temp_wide_unflagged %>%
   rowwise() %>%  # operate across columns for each row
   mutate(
-    temp_mean   = mean(c_across(`1982-01`:`1995-12`), na.rm = TRUE),
-    temp_sd     = sd(c_across(`1982-01`:`1995-12`), na.rm = TRUE),
-    temp_median = median(c_across(`1982-01`:`1995-12`), na.rm = TRUE),
+    temp_mean   = mean(c_across(`1982-01`:`2005-12`), na.rm = TRUE),
+    temp_sd     = sd(c_across(`1982-01`:`2005-12`), na.rm = TRUE),
+    temp_median = median(c_across(`1982-01`:`2005-12`), na.rm = TRUE),
     temp_min    = min(c_across(`1982-01`:`1995-12`), na.rm = TRUE),
-    temp_max    = max(c_across(`1982-01`:`1995-12`), na.rm = TRUE),
+    temp_max    = max(c_across(`1982-01`:`2005-12`), na.rm = TRUE),
     temp_range  = temp_max - temp_min
   ) %>%
   ungroup()
