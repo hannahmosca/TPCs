@@ -36,15 +36,39 @@ layer_names <- format(as.Date(time_values), "%Y-%m-%d")
 names(r_temp1996thr2005) <- layer_names
 names(r_temp1996thr2005) #520 weeks: starting from 1996-01-07 to 2005-12-30
 
+## 2006 thr 2019
+file2006thr2019 <- "waterTemp_weekAvg_output_hadgem_rcp4p5_2006-01-07_to_2019-12-30.nc"
+r_temp2006thr2019 <- rast((here("raw-data", file2006thr2019)), subds = "waterTemperature")
+time_values <- time(r_temp2006thr2019)
+layer_names <- format(as.Date(time_values), "%Y-%m-%d")
+names(r_temp2006thr2019) <- layer_names
+names(r_temp2006thr2019) #520 weeks: starting from 2006-01-07 to 2019-12-30
+
+## 2020 thr 2029
+file2020thr2019 <- "waterTemp_weekAvg_output_hadgem_rcp4p5_2020-01-07_to_2029-12-30.nc"
+r_temp2006thr2019 <- rast((here("raw-data", file2006thr2019)), subds = "waterTemperature")
+time_values <- time(r_temp2006thr2019)
+layer_names <- format(as.Date(time_values), "%Y-%m-%d")
+names(r_temp2006thr2019) <- layer_names
+names(r_temp2006thr2019) # want only through sept 2025
+
+names(r_temp1979thr1985) <- layer_names
+names(r_temp1979thr1985)
+layer_1981 <- names(r_temp1979thr1985)[[157]]
+r_temp1982thr1985 <- subset(r_temp1979thr1985, 157:364)
+## now have 1982 to 1985
+names(r_temp1982thr1985) #208 weeks: starting from 1982-01-07 to 1985-12-30
+
+
 
 #merge all rasters
-freshwater_r_temp_1982thr2005 <- c(r_temp1982thr1985, r_temp1986thr1995, r_temp1996thr2005)
-names(freshwater_r_temp_1982thr2005)
-crs(freshwater_r_temp_1982thr2005) 
-ext(freshwater_r_temp_1982thr2005)
-res(freshwater_r_temp_1982thr2005)     
-ncell(freshwater_r_temp_1982thr2005)    
-nlyr(freshwater_r_temp_1982thr2005)    
+freshwater_r_temp <- c(r_temp1982thr1985, r_temp1986thr1995, r_temp1996thr2005, r_temp2006thr2019)
+names(freshwater_r_temp)
+crs(freshwater_r_temp) 
+ext(freshwater_r_temp)
+res(freshwater_r_temp)     
+ncell(freshwater_r_temp)    
+nlyr(freshwater_r_temp)    
 
 # #change resolution to match SST dataset resolution! wait to do this until i have all the data/its taking too long #
 # res(freshwater_r_temp_1982thr1995) # = 0.08333333 0.08333334, and sst is  = 0.25 0.25
@@ -93,20 +117,20 @@ my_points <- unique_lat_long %>%
   select(longitude, latitude) 
 
 #check where points fall, some estuaries to be dealt with
-new_my_points <- vect(unique_lat_long, geom = c("longitude", "latitude"), crs = crs(freshwater_r_temp_1982thr1995))
+new_my_points <- vect(unique_lat_long, geom = c("longitude", "latitude"), crs = crs(freshwater_r_temp))
 #tidyterra needs to be loaded, but it messes with tidy
 ggplot() +
-  geom_spatraster(data = freshwater_r_temp_1982thr1995[[12]], aes(fill = 1982-03-25)) +
+  geom_spatraster(data = freshwater_r_temp[[12]], aes(fill = 1982-03-25)) +
   geom_spatvector(data = new_my_points, color = "red")
 
 ###extract only temp values for my points
-temp_list <- vector("list", nlyr(freshwater_r_temp_1982thr1995))
+temp_list <- vector("list", nlyr(freshwater_r_temp))
 
-for (i in seq_len(nlyr(freshwater_r_temp_1982thr1995))) {
+for (i in seq_len(nlyr(freshwater_r_temp))) {
   message("Extracting layer: ", i)
   # extract temp values for each point
   temp_vals <- terra::extract(
-    freshwater_r_temp_1982thr1995[[i]],
+    freshwater_r_temp[[i]],
     new_my_points,
     method = "simple",
     search_radius = 30000
