@@ -42,27 +42,20 @@ r_temp2006thr2019 <- rast((here("raw-data", file2006thr2019)), subds = "waterTem
 time_values <- time(r_temp2006thr2019)
 layer_names <- format(as.Date(time_values), "%Y-%m-%d")
 names(r_temp2006thr2019) <- layer_names
-names(r_temp2006thr2019) #520 weeks: starting from 2006-01-07 to 2019-12-30
+names(r_temp2006thr2019) #728 weeks: starting from 2006-01-07 to 2019-12-30
 
 ## 2020 thr 2029
-file2020thr2019 <- "waterTemp_weekAvg_output_hadgem_rcp4p5_2020-01-07_to_2029-12-30.nc"
-r_temp2006thr2019 <- rast((here("raw-data", file2006thr2019)), subds = "waterTemperature")
-time_values <- time(r_temp2006thr2019)
+file2020thr2029 <- "waterTemp_weekAvg_output_hadgem_rcp4p5_2020-01-07_to_2029-12-30.nc"
+r_temp2020thr2029 <- rast((here("raw-data", file2020thr2029)), subds = "waterTemperature")
+time_values <- time(r_temp2020thr2029)
 layer_names <- format(as.Date(time_values), "%Y-%m-%d")
-names(r_temp2006thr2019) <- layer_names
-names(r_temp2006thr2019) # want only through sept 2025
-
-names(r_temp1979thr1985) <- layer_names
-names(r_temp1979thr1985)
-layer_1981 <- names(r_temp1979thr1985)[[157]]
-r_temp1982thr1985 <- subset(r_temp1979thr1985, 157:364)
-## now have 1982 to 1985
-names(r_temp1982thr1985) #208 weeks: starting from 1982-01-07 to 1985-12-30
-
-
+names(r_temp2020thr2029) <- layer_names
+names(r_temp2020thr2029) # want only through sept 2025
+r_temp2020thr2025 <- subset(r_temp2020thr2029, 1:299)
+names(r_temp2020thr2025) #299 weeks: starting from 2020-01-07 to 2025-09-30
 
 #merge all rasters
-freshwater_r_temp <- c(r_temp1982thr1985, r_temp1986thr1995, r_temp1996thr2005, r_temp2006thr2019)
+freshwater_r_temp <- c(r_temp1982thr1985, r_temp1986thr1995, r_temp1996thr2005, r_temp2006thr2019, r_temp2020thr2025)
 names(freshwater_r_temp)
 crs(freshwater_r_temp) 
 ext(freshwater_r_temp)
@@ -84,8 +77,27 @@ nlyr(freshwater_r_temp)
 #   method = "bilinear"           
 # )
 # 
-# plot(freshwater_r_temp_1982thr1995_resampled[[1]])
-  
+rm(r_temp1979thr1985)
+rm(r_temp1982thr1985)
+rm(r_temp1986thr1995)
+rm(r_temp1996thr2005)
+rm(r_temp2006thr2019)
+rm(r_temp2020thr2025)
+rm(r_temp2020thr2029)
+### freshwater temp data for all locations monthly averages
+#convert names to dates
+dates <- as.Date(names(freshwater_r_temp))
+month_group <- format(dates, "%Y-%m")
+r_monthly <- tapp(freshwater_r_temp, month_group, mean)  
+rm(freshwater_r_temp)
+names(r_monthly)
+head(r_monthly)
+res(r_monthly)
+writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
+monthly_fresh_df <- as.data.frame(r_monthly, xy = TRUE)
+is.na(r_monthly)
+
+plot(r_monthly[[8]])
 #my point data
 datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
 curves <- readRDS(here('processed-data', 'wild-tpcs.Rds'))
@@ -136,7 +148,7 @@ for (i in seq_len(nlyr(freshwater_r_temp))) {
     search_radius = 30000
   ) #add layer identifier and date
   temp_vals$layer <- i
-  temp_vals$date <- as.Date(names(freshwater_r_temp_1982thr1995)[i])
+  temp_vals$date <- as.Date(names(freshwater_r_temp)[i])
   
   temp_list[[i]] <- temp_vals
 }
@@ -153,6 +165,7 @@ temp_wide <- temp_all %>%
   select(ID, var, distance, watertemp_value) %>% 
   pivot_wider(names_from = var, values_from = watertemp_value ) %>% 
   arrange(ID)
+temp_wide <- temp_wide[-42,]
 #add back details
 temp_wide$study_ID = unique_lat_long$study_ID
 temp_wide$species_ID = unique_lat_long$species_ID
@@ -177,7 +190,7 @@ temp_monthly <- cbind(
 
 ##now go from kelvin to celius
 temp_monthly <- temp_monthly %>%
-  mutate(across(`1982-01`:`2005-12`, ~ .x - 273.15))
+  mutate(across(`1982-01`:`2025-09`, ~ .x - 273.15))
 
 ###for now, flagging 2_0047, 1_0019 needs to be in marine, 2_0093 is an estuary
 temp_wide_unflagged <- temp_monthly %>%
@@ -185,14 +198,18 @@ temp_wide_unflagged <- temp_monthly %>%
 freshwater_temperatures <- temp_wide_unflagged %>%
   rowwise() %>%  # operate across columns for each row
   mutate(
-    temp_mean   = mean(c_across(`1982-01`:`2005-12`), na.rm = TRUE),
-    temp_sd     = sd(c_across(`1982-01`:`2005-12`), na.rm = TRUE),
-    temp_median = median(c_across(`1982-01`:`2005-12`), na.rm = TRUE),
-    temp_min    = min(c_across(`1982-01`:`1995-12`), na.rm = TRUE),
-    temp_max    = max(c_across(`1982-01`:`2005-12`), na.rm = TRUE),
+    temp_mean   = mean(c_across(`1982-01`:`2025-09`), na.rm = TRUE),
+    temp_sd     = sd(c_across(`1982-01`:`2025-09`), na.rm = TRUE),
+    temp_median = median(c_across(`1982-01`:`2025-09`), na.rm = TRUE),
+    temp_min    = min(c_across(`1982-01`:`2025-09`), na.rm = TRUE),
+    temp_max    = max(c_across(`1982-01`:`2025-09`), na.rm = TRUE),
     temp_range  = temp_max - temp_min
   ) %>%
   ungroup()
+## save raw temp file
+saveRDS(freshwater_temperatures, file = here("processed-data", "freshwater_temp_raw_points.RDS"))
+
+
 freshwater_temperatures <- freshwater_temperatures %>%
   select(latitude, longitude, study_ID, species_ID, temp_mean, temp_sd, temp_median, temp_min, temp_max, temp_range, distance, everything())
 
