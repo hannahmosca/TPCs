@@ -199,7 +199,14 @@ ggplot(monthly_fresh_thresholded_df_coarse, aes(x = latitude)) +
                filter(topt_TF == TRUE), aes(x = latitude, y = topt), color = "black", alpha = .4) +
   labs(x = "latitude", y = "water temperature") +
   theme_classic()
-
+ggplot(monthly_fresh_thresholded_df_coarse, aes(x = latitude)) +
+  geom_ribbon(aes(ymin = mean_temp, ymax = high_q), fill = "lightgreen", alpha = .6, linewidth = 1.2) +
+  geom_line(aes (y = mean_temp), color = "darkgreen", size = 2) +
+  geom_point(data = fitted_datasets %>%
+               filter(land_or_sea == "terrestrial") %>%
+               filter(topt_TF == TRUE), aes(x = latitude, y = topt), color = "black", alpha = .4) +
+  labs(x = "latitude", y = "water temperature") +
+  theme_classic()
 
 freshwater_to_save <- monthly_fresh_df %>%
   select(latitude, longitude, temp_mean, temp_sd, temp_median, temp_min, temp_max, temp_range)
