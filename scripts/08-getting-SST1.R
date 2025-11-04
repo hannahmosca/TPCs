@@ -26,6 +26,28 @@ r_temp <- rotate(r_temp)
 #subset r_temp so starts where freshwater data does: 1982-01
 r_temp1982_01to2025_09 <- subset(r_temp, 5:529)
 
+
+## marine temp data for all locations monthly averages ##
+df_marine <- as.data.frame(r_temp1982_01to2025_09, xy = TRUE, na.rm = FALSE)
+saveRDS(df_marine, file = here("processed-data", "marine_sst_all_temp.RDS"))
+
+df_marine <- df_marine %>%
+  rowwise() %>%  # operate across columns for each row
+  mutate(
+    sst_mean   = mean(c_across("1982-01-01":"2025-09-01"), na.rm = TRUE),
+    sst_sd     = sd(c_across("1982-01-01":"2025-09-01"), na.rm = TRUE),
+    sst_median = median(c_across("1982-01-01":"2025-09-01"), na.rm = TRUE),
+    sst_min    = min(c_across("1982-01-01":"2025-09-01"), na.rm = TRUE),
+    sst_max    = max(c_across("1982-01-01":"2025-09-01"), na.rm = TRUE),
+    sst_range  = sst_max - sst_min
+  ) %>%
+  ungroup()
+##save raw temp file
+saveRDS(df_marine, file = here("processed-data", "marine_sst_all_temp.RDS"))
+
+
+
+
 #my point data
 datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
 curves <- readRDS(here('processed-data', 'wild-tpcs.Rds'))
@@ -107,6 +129,9 @@ sst_stats <- sst_wide %>%
     sst_range  = sst_max - sst_min
   ) %>%
   ungroup()
+##save raw temp file
+saveRDS(sst_stats, file = here("processed-data", "marine_sst_raw_temp.RDS"))
+
 sst_stats <- sst_stats %>%
   select(latitude, longitude, study_ID, species_ID, sst_mean, sst_sd, sst_median, sst_min, sst_max, sst_range, distance, everything())
 marine <- marine %>%

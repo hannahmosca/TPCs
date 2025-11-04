@@ -44,6 +44,7 @@ layer_names <- format(as.Date(time_values), "%Y-%m-%d")
 names(r_temp2006thr2019) <- layer_names
 names(r_temp2006thr2019) #728 weeks: starting from 2006-01-07 to 2019-12-30
 
+
 ## 2020 thr 2029
 file2020thr2029 <- "waterTemp_weekAvg_output_hadgem_rcp4p5_2020-01-07_to_2029-12-30.nc"
 r_temp2020thr2029 <- rast((here("raw-data", file2020thr2029)), subds = "waterTemperature")
@@ -63,20 +64,7 @@ res(freshwater_r_temp)
 ncell(freshwater_r_temp)    
 nlyr(freshwater_r_temp)    
 
-# #change resolution to match SST dataset resolution! wait to do this until i have all the data/its taking too long #
-# res(freshwater_r_temp_1982thr1995) # = 0.08333333 0.08333334, and sst is  = 0.25 0.25
-# #load sst raster
-# filename2 <- "sst.mon.mean.nc" # sst data, 529 monthly means from 
-# sst = rast((here("raw-data", filename2)), subds = "sst")
-# res(sst)
-
-# # Resample the finer freshwater raster to match the SST raster's resolution
-# freshwater_r_temp_1982thr1995_resampled <- terra::resample(
-#   freshwater_r_temp_1982thr1995,  # finer
-#   sst,                            # coarser
-#   method = "bilinear"           
-# )
-# 
+#make more space
 rm(r_temp1979thr1985)
 rm(r_temp1982thr1985)
 rm(r_temp1986thr1995)
@@ -88,16 +76,138 @@ rm(r_temp2020thr2029)
 #convert names to dates
 dates <- as.Date(names(freshwater_r_temp))
 month_group <- format(dates, "%Y-%m")
+unique_month_group <- unique(month_group)
+month <- as.Date(paste0(unique_month_group, "-01"))
+
 r_monthly <- tapp(freshwater_r_temp, month_group, mean)  
 rm(freshwater_r_temp)
 names(r_monthly)
 head(r_monthly)
 res(r_monthly)
 writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
-monthly_fresh_df <- as.data.frame(r_monthly, xy = TRUE)
-is.na(r_monthly)
 
-plot(r_monthly[[8]])
+freshwater_monthly <- "freshwater_monthly.nc"
+freshwater_monthly <- rast((here("processed-data", freshwater_monthly)), subds = "waterTemperature")
+dim(freshwater_monthly) #before removing any values 2160 4320  525
+
+
+
+threshold <- 350 #76.86 dg celcius
+freshwater_monthly[freshwater_monthly > threshold] <- NA
+freshwater_monthly_thr <- freshwater_monthly
+names(freshwater_monthly_thr) <- month
+#for now doing this backwards and getting non thresholded data to compare
+freshwater_monthly <- "freshwater_monthly.nc"
+freshwater_monthly <- rast((here("processed-data", freshwater_monthly)), subds = "waterTemperature")
+names(freshwater_monthly) <- month
+
+#make coarser
+freshwater_monthly_coarser <- aggregate(freshwater_monthly, fact = 2, fun = mean, na.rm = TRUE)
+freshwater_monthly_thr_coarser <- aggregate(freshwater_monthly_thr, fact = 2, fun = mean, na.rm = TRUE)
+
+res(freshwater_monthly_coarser)
+plot(freshwater_monthly[[8]])
+plot(freshwater_monthly_thr[[8]])
+plot(freshwater_monthly_coarser[[8]])
+plot(freshwater_monthly_thr_coarser[[8]])
+plot(freshwater_monthly_thr[[8]])
+#make dfs, one thresholded, one not
+monthly_fresh_df <- as.data.frame(freshwater_monthly_coarser, xy = TRUE, cells = FALSE, na.rm = TRUE)
+monthly_fresh_thresholded_df <- as.data.frame(freshwater_monthly_thr_coarser, xy = TRUE, cells = FALSE, na.rm = TRUE)
+
+
+#change from celcius to kel
+monthly_fresh_df <- monthly_fresh_df %>%
+  mutate(across("1982-01-01":"2025-09-01", ~ .x - 273.15))
+monthly_fresh_thresholded_df <- monthly_fresh_thresholded_df %>%
+  mutate(across("1982-01-01":"2025-09-01", ~ .x - 273.15))
+#rename to get lat and long
+monthly_fresh_df <- monthly_fresh_df %>%
+  rename(longitude = x) %>%
+  rename(latitude = y)
+monthly_fresh_thresholded_df <- monthly_fresh_thresholded_df %>%
+  rename(longitude = x) %>%
+  rename(latitude = y)
+
+install.packages("matrixStats")
+library(matrixStats)
+#compute summary for not thresholded
+temp_cols <- grep("^\\d{4}-\\d{2}-\\d{2}$", names(monthly_fresh_df))
+temp_matrix <- as.matrix(monthly_fresh_df[, temp_cols])
+monthly_fresh_df$temp_mean <- rowMeans(temp_matrix, na.rm = TRUE)
+monthly_fresh_df$temp_sd <- rowSds(temp_matrix, na.rm = TRUE)
+monthly_fresh_df$temp_median <- rowMedians(temp_matrix, na.rm = TRUE)
+monthly_fresh_df$temp_min <- rowMins(temp_matrix, na.rm = TRUE)
+monthly_fresh_df$temp_max <- rowMaxs(temp_matrix, na.rm = TRUE)
+monthly_fresh_df$q_low <- rowQuantiles(temp_matrix, probs = 0.025, na.rm = TRUE)
+monthly_fresh_df$q_high <- rowQuantiles(temp_matrix, probs = 0.975, na.rm = TRUE)
+monthly_fresh_df$temp_range <- monthly_fresh_df$temp_max - monthly_fresh_df$temp_min
+#compute summary for thresholded
+temp_cols <- grep("^\\d{4}-\\d{2}-\\d{2}$", names(monthly_fresh_thresholded_df))
+temp_matrix <- as.matrix(monthly_fresh_thresholded_df[, temp_cols])
+monthly_fresh_thresholded_df$temp_mean <- rowMeans(temp_matrix, na.rm = TRUE)
+monthly_fresh_thresholded_df$temp_sd <- rowSds(temp_matrix, na.rm = TRUE)
+monthly_fresh_thresholded_df$temp_median <- rowMedians(temp_matrix, na.rm = TRUE)
+monthly_fresh_thresholded_df$temp_min <- rowMins(temp_matrix, na.rm = TRUE)
+monthly_fresh_thresholded_df$temp_max <- rowMaxs(temp_matrix, na.rm = TRUE)
+monthly_fresh_thresholded_df$q_low <- rowQuantiles(temp_matrix, probs = 0.025, na.rm = TRUE)
+monthly_fresh_thresholded_df$q_high <- rowQuantiles(temp_matrix, probs = 0.975, na.rm = TRUE)
+monthly_fresh_thresholded_df$temp_range <- monthly_fresh_thresholded_df$temp_max - monthly_fresh_thresholded_df$temp_min
+saveRDS(monthly_fresh_df, here("processed-data", "freshwater_all_df_no_threshold.RDS"))
+saveRDS(monthly_fresh_thresholded_df, here("processed-data", "freshwater_all_df_threshold.RDS"))
+
+ggplot(monthly_fresh_df) + 
+  geom_linerange(aes(ymin = q_low,
+                     ymax = h_low, x = latitude), color = "lightgreen", alpha = .6, linewidth = 1) +
+  geom_point(aes(x = latitude, y = temp_mean)) +
+  labs(x = "Latitude", y = "Water Temperature (1982-2025 month averages)") +
+  theme_classic()
+
+ggplot(monthly_fresh_thresholded_df) +
+  geom_linerange(aes(ymin = q_low,
+                     ymax = q_high, x = latitude), color = "lightgreen", alpha = .6, linewidth = 1) +
+  geom_point(aes(x = latitude, y = temp_mean)) +
+  labs(x = "Latitude", y = "Water Temperature (1982-2025 month averages)") +
+  theme_classic()
+
+monthly_fresh_thresholded_df_coarse <- monthly_fresh_thresholded_df %>%
+  mutate(lat_bin = cut(latitude, breaks = seq(floor(min(latitude)),
+                                              ceiling(max(latitude)),
+                                              by = 1))) %>%
+  group_by(lat_bin) %>%
+  summarise(
+    latitude = mean(latitude, na.rm = TRUE),
+    mean_temp = mean(temp_mean, na.rm = TRUE),
+    median_temp = median(temp_median, na.rm = TRUE),
+    max_temp = max(temp_max, na.rm = TRUE),
+    min_temp = min(temp_min, na.rm = TRUE),
+    low_q = quantile(q_low, probs = 0.025, na.rm = TRUE),
+    high_q = quantile(q_high, probs = 0.975, na.rm = TRUE))
+
+ggplot(monthly_fresh_thresholded_df_coarse) +
+  geom_linerange(aes(ymin = low_q,
+                     ymax = high_q, x = latitude), color = "lightgreen", alpha = .6, linewidth = 1) +
+  geom_point(aes(x = latitude, y = mean_temp)) +
+  labs(x = "Latitude", y = "Water Temperature (1982-2025 month averages)") +
+  theme_classic()
+fitted_datasets <- readRDS(here("processed-data", "sorted_datasets_withparams.RDS"))
+ggplot(monthly_fresh_thresholded_df_coarse, aes(x = latitude)) +
+  geom_ribbon(aes(ymin = median_temp, ymax = high_q), fill = "lightgreen", alpha = .6, linewidth = 1.2) +
+  geom_line(aes (y = median_temp), color = "darkgreen", size = 2) +
+  geom_point(data = fitted_datasets %>%
+               filter(land_or_sea == "terrestrial") %>%
+               filter(topt_TF == TRUE), aes(x = latitude, y = topt), color = "black", alpha = .4) +
+  labs(x = "latitude", y = "water temperature") +
+  theme_classic()
+
+
+freshwater_to_save <- monthly_fresh_df %>%
+  select(latitude, longitude, temp_mean, temp_sd, temp_median, temp_min, temp_max, temp_range)
+
+
+
+
+
 #my point data
 datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
 curves <- readRDS(here('processed-data', 'wild-tpcs.Rds'))
