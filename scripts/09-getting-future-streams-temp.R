@@ -1,11 +1,16 @@
-### new script for working with future streams data ###
+### this is a script to get / work with freshwater temperature data from future streams ###
+
+# first, I am merging 10-15 yr raster chunks of weekly temp data to get a raster of monthly averages from 1982-2025
+# then, I am extracting point data for our collection lat and longs for the freshwater fish
+
 #required packages
-rm(list=ls())
 library(ncdf4)
 library(terra)
 library(here)
 library(dplyr)
 library(tidyverse)
+
+#### getting temp from 1982-2025 ####
 #14 year file chunks, historical and present weekly, need to get them to 1 (monthly from 1982-2025)
 
 ## 1979 thr 1985
@@ -72,31 +77,33 @@ rm(r_temp1996thr2005)
 rm(r_temp2006thr2019)
 rm(r_temp2020thr2025)
 rm(r_temp2020thr2029)
-### freshwater temp data for all locations monthly averages
+
+#### freshwater temp data for all locations monthly averages ####
 #convert names to dates
 dates <- as.Date(names(freshwater_r_temp))
 month_group <- format(dates, "%Y-%m")
 unique_month_group <- unique(month_group)
 month <- as.Date(paste0(unique_month_group, "-01"))
-
+#go from weekly to monthly
 r_monthly <- tapp(freshwater_r_temp, month_group, mean)  
 rm(freshwater_r_temp)
 names(r_monthly)
 head(r_monthly)
 res(r_monthly)
+#save file locally so don't have to do this computation again
 writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
 
+
+#### filtering out extremes for all locations freshwater ####
 freshwater_monthly <- "freshwater_monthly.nc"
 freshwater_monthly <- rast((here("processed-data", freshwater_monthly)), subds = "waterTemperature")
 dim(freshwater_monthly) #before removing any values 2160 4320  525
-
-
 
 threshold <- 350 #76.86 dg celcius
 freshwater_monthly[freshwater_monthly > threshold] <- NA
 freshwater_monthly_thr <- freshwater_monthly
 names(freshwater_monthly_thr) <- month
-#for now doing this backwards and getting non thresholded data to compare
+#getting non thresholded data to compare
 freshwater_monthly <- "freshwater_monthly.nc"
 freshwater_monthly <- rast((here("processed-data", freshwater_monthly)), subds = "waterTemperature")
 names(freshwater_monthly) <- month
@@ -115,8 +122,7 @@ plot(freshwater_monthly_thr[[8]])
 monthly_fresh_df <- as.data.frame(freshwater_monthly_coarser, xy = TRUE, cells = FALSE, na.rm = TRUE)
 monthly_fresh_thresholded_df <- as.data.frame(freshwater_monthly_thr_coarser, xy = TRUE, cells = FALSE, na.rm = TRUE)
 
-
-#change from celcius to kel
+#change from kelvin to celcius
 monthly_fresh_df <- monthly_fresh_df %>%
   mutate(across("1982-01-01":"2025-09-01", ~ .x - 273.15))
 monthly_fresh_thresholded_df <- monthly_fresh_thresholded_df %>%
@@ -129,6 +135,7 @@ monthly_fresh_thresholded_df <- monthly_fresh_thresholded_df %>%
   rename(longitude = x) %>%
   rename(latitude = y)
 
+#### compute summary stats for all lat/long data ####
 install.packages("matrixStats")
 library(matrixStats)
 #compute summary for not thresholded
@@ -153,69 +160,15 @@ monthly_fresh_thresholded_df$temp_max <- rowMaxs(temp_matrix, na.rm = TRUE)
 monthly_fresh_thresholded_df$q_low <- rowQuantiles(temp_matrix, probs = 0.025, na.rm = TRUE)
 monthly_fresh_thresholded_df$q_high <- rowQuantiles(temp_matrix, probs = 0.975, na.rm = TRUE)
 monthly_fresh_thresholded_df$temp_range <- monthly_fresh_thresholded_df$temp_max - monthly_fresh_thresholded_df$temp_min
+
+
+####save all lat and long thresholded and unthresholded data ####
 saveRDS(monthly_fresh_df, here("processed-data", "freshwater_all_df_no_threshold.RDS"))
 saveRDS(monthly_fresh_thresholded_df, here("processed-data", "freshwater_all_df_threshold.RDS"))
 
-ggplot(monthly_fresh_df) + 
-  geom_linerange(aes(ymin = q_low,
-                     ymax = h_low, x = latitude), color = "lightgreen", alpha = .6, linewidth = 1) +
-  geom_point(aes(x = latitude, y = temp_mean)) +
-  labs(x = "Latitude", y = "Water Temperature (1982-2025 month averages)") +
-  theme_classic()
 
-ggplot(monthly_fresh_thresholded_df) +
-  geom_linerange(aes(ymin = q_low,
-                     ymax = q_high, x = latitude), color = "lightgreen", alpha = .6, linewidth = 1) +
-  geom_point(aes(x = latitude, y = temp_mean)) +
-  labs(x = "Latitude", y = "Water Temperature (1982-2025 month averages)") +
-  theme_classic()
-
-monthly_fresh_thresholded_df_coarse <- monthly_fresh_thresholded_df %>%
-  mutate(lat_bin = cut(latitude, breaks = seq(floor(min(latitude)),
-                                              ceiling(max(latitude)),
-                                              by = 1))) %>%
-  group_by(lat_bin) %>%
-  summarise(
-    latitude = mean(latitude, na.rm = TRUE),
-    mean_temp = mean(temp_mean, na.rm = TRUE),
-    median_temp = median(temp_median, na.rm = TRUE),
-    max_temp = max(temp_max, na.rm = TRUE),
-    min_temp = min(temp_min, na.rm = TRUE),
-    low_q = quantile(q_low, probs = 0.025, na.rm = TRUE),
-    high_q = quantile(q_high, probs = 0.975, na.rm = TRUE))
-
-ggplot(monthly_fresh_thresholded_df_coarse) +
-  geom_linerange(aes(ymin = low_q,
-                     ymax = high_q, x = latitude), color = "lightgreen", alpha = .6, linewidth = 1) +
-  geom_point(aes(x = latitude, y = mean_temp)) +
-  labs(x = "Latitude", y = "Water Temperature (1982-2025 month averages)") +
-  theme_classic()
-fitted_datasets <- readRDS(here("processed-data", "sorted_datasets_withparams.RDS"))
-ggplot(monthly_fresh_thresholded_df_coarse, aes(x = latitude)) +
-  geom_ribbon(aes(ymin = median_temp, ymax = high_q), fill = "lightgreen", alpha = .6, linewidth = 1.2) +
-  geom_line(aes (y = median_temp), color = "darkgreen", size = 2) +
-  geom_point(data = fitted_datasets %>%
-               filter(land_or_sea == "terrestrial") %>%
-               filter(topt_TF == TRUE), aes(x = latitude, y = topt), color = "black", alpha = .4) +
-  labs(x = "latitude", y = "water temperature") +
-  theme_classic()
-ggplot(monthly_fresh_thresholded_df_coarse, aes(x = latitude)) +
-  geom_ribbon(aes(ymin = mean_temp, ymax = high_q), fill = "lightgreen", alpha = .6, linewidth = 1.2) +
-  geom_line(aes (y = mean_temp), color = "darkgreen", size = 2) +
-  geom_point(data = fitted_datasets %>%
-               filter(land_or_sea == "terrestrial") %>%
-               filter(topt_TF == TRUE), aes(x = latitude, y = topt), color = "black", alpha = .4) +
-  labs(x = "latitude", y = "water temperature") +
-  theme_classic()
-
-freshwater_to_save <- monthly_fresh_df %>%
-  select(latitude, longitude, temp_mean, temp_sd, temp_median, temp_min, temp_max, temp_range)
-
-
-
-
-
-#my point data
+#### freshwater temp data for my lat and long points ####
+#load my point data and curve data
 datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
 curves <- readRDS(here('processed-data', 'wild-tpcs.Rds'))
 
@@ -235,7 +188,7 @@ study <- read.csv(here('raw-data', 'data_extraction_21_10_2025_ study_ID.csv')) 
   select(study_ID, data_collection_year, pub_year)
 study <- study %>%
   filter(study_ID %in% freshwater$study_ID)
-
+#adding collection time info?
 freshwater <- freshwater %>%
   left_join(study %>% select(study_ID, data_collection_year, pub_year), join_by(study_ID)) %>%
   distinct()
@@ -326,6 +279,7 @@ temp_monthly <- temp_monthly %>%
 temp_monthly_thresholded <- temp_monthly_thresholded %>%
   mutate(across(`1982-01`:`2025-09`, ~ .x - 273.15))
 
+
 #### look at distributions of temp across my lat ####
 temp_monthly_long <- temp_monthly %>%
   pivot_longer(
@@ -353,6 +307,7 @@ ggplot(temp_monthly_thresholded_long, aes(x = temperature)) +
     y = "Frequency") +
   theme_classic()
 ##no difference from thresholding my point data..
+
 
 ###for now, flagging 2_0047, 1_0019 needs to be in marine, 2_0093 is an estuary
 temp_wide_unflagged <- temp_monthly %>%
