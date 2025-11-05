@@ -293,6 +293,11 @@ temp_wide <- temp_wide %>%
 
 date_cols <- grep("^\\d{4}-\\d{2}-\\d{2}$", names(temp_wide), value = TRUE)
 date_months <- format(as.Date(date_cols), "%Y-%m")
+##threshold the values
+threshold <- 350 # 76.86°C
+temp_wide_thresholded <- temp_wide %>%
+  mutate(across(`1982-01-07`:`2025-09-30`,
+                ~ ifelse(.x > threshold, NA, .x)))
 
 ##now make monthly instead of weekly
 monthly_means <- sapply(unique(date_months), function(m) {
@@ -304,10 +309,50 @@ temp_monthly <- cbind(
   as.data.frame(monthly_means)
 ) %>%
   select(latitude, longitude, study_ID, species_ID, distance, everything())
+## now for thresholded data
+monthly_means <- sapply(unique(date_months), function(m) {
+  cols <- date_cols[date_months == m]
+  rowMeans(temp_wide_thresholded[, cols], na.rm = TRUE)
+})
+temp_monthly_thresholded <- cbind(
+  temp_wide_thresholded[, c("latitude", "longitude", "study_ID", "species_ID", "distance")],
+  as.data.frame(monthly_means)
+) %>%
+  select(latitude, longitude, study_ID, species_ID, distance, everything())
 
 ##now go from kelvin to celius
 temp_monthly <- temp_monthly %>%
   mutate(across(`1982-01`:`2025-09`, ~ .x - 273.15))
+temp_monthly_thresholded <- temp_monthly_thresholded %>%
+  mutate(across(`1982-01`:`2025-09`, ~ .x - 273.15))
+
+#### look at distributions of temp across my lat ####
+temp_monthly_long <- temp_monthly %>%
+  pivot_longer(
+    cols = matches("^\\d{4}-\\d{2}$"),
+    names_to = "date",
+    values_to = "temperature"
+  )
+temp_monthly_thresholded_long <- temp_monthly_thresholded %>%
+  pivot_longer(
+    cols = matches("^\\d{4}-\\d{2}$"),
+    names_to = "date",
+    values_to = "temperature"
+  )
+ggplot(temp_monthly_long, aes(x = temperature)) +
+  geom_histogram(binwidth = .5, fill = "lightgreen", color = "white", alpha = .5) +
+  labs(
+    x = "Experienced Temperatures",
+    y = "Frequency") +
+  theme_classic()
+
+ggplot(temp_monthly_thresholded_long, aes(x = temperature)) +
+  geom_histogram(binwidth = .5, fill = "lightgreen", color = "white", alpha = .5) +
+  labs(
+    x = "Experienced Temperatures",
+    y = "Frequency") +
+  theme_classic()
+##no difference from thresholding my point data..
 
 ###for now, flagging 2_0047, 1_0019 needs to be in marine, 2_0093 is an estuary
 temp_wide_unflagged <- temp_monthly %>%
@@ -320,20 +365,13 @@ freshwater_temperatures <- temp_wide_unflagged %>%
     temp_median = median(c_across(`1982-01`:`2025-09`), na.rm = TRUE),
     temp_min    = min(c_across(`1982-01`:`2025-09`), na.rm = TRUE),
     temp_max    = max(c_across(`1982-01`:`2025-09`), na.rm = TRUE),
+    temp_q_low  = quantile(c_across(`1982-01`:`2025-09`), probs = 0.025, na.rm = TRUE),
+    temp_q_high = quantile(c_across(`1982-01`:`2025-09`), probs = 0.975, na.rm = TRUE),
     temp_range  = temp_max - temp_min
   ) %>%
   ungroup()
 ## save raw temp file
-saveRDS(freshwater_temperatures, file = here("processed-data", "freshwater_temp_raw_points.RDS"))
+saveRDS(freshwater_temperatures, file = here("processed-data", "freshwater_temperatures_my_points.RDS"))
 
 
-freshwater_temperatures <- freshwater_temperatures %>%
-  select(latitude, longitude, study_ID, species_ID, temp_mean, temp_sd, temp_median, temp_min, temp_max, temp_range, distance, everything())
-
-freshwater_unflagged <- freshwater %>%
-  filter(study_ID %in% freshwater_temperatures$study_ID)
-freshwater_unflagged <- freshwater_unflagged %>%
-  left_join(freshwater_temperatures %>% select(latitude, longitude, temp_mean, temp_sd, temp_median, temp_min, temp_max, temp_range), join_by(latitude, longitude)) %>%
-  distinct()
-saveRDS(freshwater_unflagged, file = here("processed-data", "freshwater_temp_data.RDS"))
 
