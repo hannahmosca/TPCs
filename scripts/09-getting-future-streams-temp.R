@@ -96,7 +96,7 @@ writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
 
 #### filtering out extremes for all locations freshwater ####
 freshwater_monthly <- "freshwater_monthly.nc"
-freshwater_monthly <- rast((here("processed-data", freshwater_monthly)), subds = "waterTemperature")
+freshwater_monthly <- rast((here("raw-data", freshwater_monthly)), subds = "waterTemperature")
 dim(freshwater_monthly) #before removing any values 2160 4320  525
 
 threshold <- 350 #76.86 dg celcius
@@ -105,7 +105,7 @@ freshwater_monthly_thr <- freshwater_monthly
 names(freshwater_monthly_thr) <- month
 #getting non thresholded data to compare
 freshwater_monthly <- "freshwater_monthly.nc"
-freshwater_monthly <- rast((here("processed-data", freshwater_monthly)), subds = "waterTemperature")
+freshwater_monthly <- rast((here("raw-data", freshwater_monthly)), subds = "waterTemperature")
 names(freshwater_monthly) <- month
 
 #make coarser

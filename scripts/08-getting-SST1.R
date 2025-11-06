@@ -4,7 +4,7 @@ library(terra)
 library(here)
 library(dplyr)
 library(tidyverse)
-
+rm(list=ls())
 filename <- "sst.mon.mean.nc" # sst data, 529 monthly means from 
 r_temp = rast((here("raw-data", filename)), subds = "sst")
 r_temp
@@ -22,7 +22,7 @@ names(r_temp)
 
 #rotate r_rempt so gets it to be -180 to 180 and -90to 90
 r_temp <- rotate(r_temp)
-
+plot(r_temp[[12]])
 #subset r_temp so starts where freshwater data does: 1982-01
 r_temp1982_01to2025_09 <- subset(r_temp, 5:529)
 
@@ -47,7 +47,7 @@ saveRDS(df_marine, file = here("processed-data", "marine_sst_all_temp.RDS"))
 
 
 
-
+rm(list=ls())
 #my point data
 datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
 curves <- readRDS(here('processed-data', 'wild-tpcs.Rds'))
@@ -75,6 +75,7 @@ my_points <- unique_lat_long %>%
   select(longitude, latitude) 
 
 new_my_points <- vect(unique_lat_long, geom = c("longitude", "latitude"), crs = crs(r_temp))
+install.packages("tidyterra")
 library(tidyterra)
 ggplot() +
   geom_spatraster(data = r_temp1982_01to2025_09[[1]]) +
@@ -132,10 +133,3 @@ sst_stats <- sst_wide %>%
 ##save raw temp file
 saveRDS(sst_stats, file = here("processed-data", "marine_sst_raw_temp.RDS"))
 
-sst_stats <- sst_stats %>%
-  select(latitude, longitude, study_ID, species_ID, sst_mean, sst_sd, sst_median, sst_min, sst_max, sst_range, distance, everything())
-marine <- marine %>%
-  left_join(sst_stats %>% select(latitude, longitude, sst_mean, sst_sd, sst_median, sst_min, sst_max, sst_range), join_by(latitude, longitude)) %>%
-  distinct()
-
-saveRDS(marine, file = here("processed-data", "marine_sstemp_data.RDS"))

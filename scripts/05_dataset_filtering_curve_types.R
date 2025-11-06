@@ -203,17 +203,17 @@ dataset_types <- distinct_curves %>%
     decreasing_side_TF = case_when(curve_ID %in% c(ctmax_topt_list, ctmax_only_list, breadth_list, dec_unbounded_NO_list) ~ TRUE, TRUE ~ FALSE)) %>%
   ungroup()
 
-#make long
-long_data <- dataset_types %>%
-  select(habitat_water, topt, thermal_min, thermal_max, breadth, increasing_side, decreasing_side) %>%
-  pivot_longer(
-    cols = c(topt, thermal_min, thermal_max, breadth, increasing_side, decreasing_side),
-    names_to = "parameter",
-    values_to = "is_true"
-  )
-summary_counts <- long_data %>%
-  group_by(habitat_water, parameter) %>%
-  summarise(n_true = sum(is_true, na.rm = TRUE), .groups = "drop")
+# #make long
+# long_data <- dataset_types %>%
+#   select(habitat_water, topt, thermal_min, thermal_max, breadth, increasing_side, decreasing_side) %>%
+#   pivot_longer(
+#     cols = c(topt, thermal_min, thermal_max, breadth, increasing_side, decreasing_side),
+#     names_to = "parameter",
+#     values_to = "is_true"
+#   )
+# summary_counts <- long_data %>%
+#   group_by(habitat_water, parameter) %>%
+#   summarise(n_true = sum(is_true, na.rm = TRUE), .groups = "drop")
 
 
 b <- ggplot(summary_counts, aes(x = reorder(parameter, -n_true), y = n_true, fill = habitat_water)) +
