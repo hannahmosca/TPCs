@@ -10,8 +10,8 @@ library(tidyverse)
 #load data
 fitted_datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
 curves <- readRDS(here('processed-data', 'wild-tpcs.Rds'))
-freshwater_temps <- readRDS(here("processed-data", "freshwater_temp_data.RDS"))
-marine_sst <- readRDS(here("processed-data", "marine_sstemp_data.RDS"))
+freshwater_temps <- readRDS(here("processed-data", "freshwater_temperatures_my_points.RDS"))
+marine_sst <- readRDS(here("processed-data", "marine_sst_raw_temp"))
 
 #combine temperature data
 
