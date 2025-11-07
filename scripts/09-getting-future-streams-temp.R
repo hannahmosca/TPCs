@@ -104,25 +104,19 @@ names(freshwater_monthly) <- month
 ### mask with discharge values ##
 discharge_rast <- rast(here("raw-data", "discharge_Avg.nc"))
 res(discharge_rast)
+ext(discharge_rast)
+ext(freshwater_monthly)
 res(freshwater_monthly)
-Qlim <- 50 
+discharged_align <- resample(discharge_rast, freshwater_monthly, method = "near")
+Qlim <- 2
 discharge_mask <- discharge_rast > Qlim
 
 freshwater_masked <- mask(freshwater_monthly, discharge_mask, maskvalues = FALSE)
 
-plot(freshwater_masked[[1]])
-
-# Create a raster for discharge-masked pixels only
-masked_discharge <- is.na(freshwater_masked) & !is.na(freshwater_monthly_thr)
-
-# Plot base freshwater temperature
-plot(freshwater_masked,
-     col = terrain.colors(100),
-     colNA = "white",
-     main = "August freshwater temperature (masked by discharge)")
-
-# Overlay masked discharge in black
-plot(masked_discharge, add = TRUE, col = "black", legend = FALSE)
+plot(freshwater_masked[[1]],
+     colNA = "black")
+ocean_mask <- is.na(freshwater_monthly[[1]])
+plot(ocean_mask, add = TRUE, col = "white", legend = FALSE)
 
 threshold <- 350 #76.86 dg celcius
 freshwater_monthly[freshwater_monthly > threshold] <- NA
