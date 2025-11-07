@@ -13,5 +13,8 @@ waterTemp_weekAvg_output_hadgem_rcp4p5_2020-01-07_to_2029-12-30.nc
 >>>>>>> 4883adfcc8fb297088a23a223fd38ceadadb7996
 freshwater_monthly.nc
 data_extraction_06_11_2025.csv
+<<<<<<< HEAD
 waterTempAnnual_merged_1979-2014.nc
+=======
+>>>>>>> deaa3096026652255c0cdf6ec4f576de124dd7d8
 discharge_Avg.nc

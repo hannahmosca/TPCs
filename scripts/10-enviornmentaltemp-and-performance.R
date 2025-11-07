@@ -421,18 +421,28 @@ freshwater_temps_topt <- freshwater_temps_topt %>%
 #topt is further above mean temp in more variabile enviorneents in marine systems
 var_dif_mean_reg <- ggplot(data = fits_with_temps %>%
          filter(topt_TF == TRUE),
+<<<<<<< HEAD
+       aes(x = temp_sd, y = diff_mean, color = enviornment)) +
+=======
        aes(x = temp_sd, y = topt-q_high, color = enviornment)) +
+>>>>>>> 153258ea767dee17de2cbe235437fc87ba56ae83
   geom_abline(intercept = 0, slope = -1, color = "black", linetype = "dashed") +
   geom_point(alpha = 0.7) +
   geom_smooth(method = stats::lm) +
   labs(
     x = "thermal variability (temp sd)",
+<<<<<<< HEAD
+    y = "mean temp - topt") +
+=======
     y = "topt-q-high") +
+>>>>>>> 153258ea767dee17de2cbe235437fc87ba56ae83
   scale_color_manual(
     name = "Environment",
     values = c("marine" = "blue", "freshwater" = "lightgreen")
   ) +
   theme_classic()
+<<<<<<< HEAD
+=======
 var_dif_mean_reg
 var_dif_mean_reg <- ggplot(data = fits_with_temps %>%
                              filter(topt_TF == TRUE),
@@ -450,6 +460,7 @@ var_dif_mean_reg <- ggplot(data = fits_with_temps %>%
   theme_classic()
 var_dif_mean_reg
 
+>>>>>>> 153258ea767dee17de2cbe235437fc87ba56ae83
 ggsave("var_dif_mean_reg.pdf", plot = var_dif_mean_reg, path = here("figures"), width = 5, height = 4)
 
 var_dif_max_reg <- ggplot(data = fits_with_temps %>%
@@ -480,6 +491,8 @@ extreme_mean_box <- ggplot(fits_with_temps, aes(x = enviornment, y = q_high - te
   theme_classic()
 extreme_mean_box
 ggsave("extreme-mean-box.pdf", plot = extreme_mean_box, path = here("figures"), width = 5, height = 4)
+<<<<<<< HEAD
+=======
 ggplot(data = fits_with_temps %>%
                              filter(topt_TF == TRUE),
                            aes(x = abs_latitude, y = temp_sd, color = enviornment)) +
@@ -495,6 +508,7 @@ ggplot(data = fits_with_temps %>%
   ) +
   theme_classic()
 
+>>>>>>> 153258ea767dee17de2cbe235437fc87ba56ae83
 
 ggplot(data = fits_with_temps %>%
          filter(topt_TF == TRUE),

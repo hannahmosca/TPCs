@@ -34,4 +34,8 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 anabackup.R
+<<<<<<< HEAD
 temperaturePlot.png
+=======
+.DS_Store
+>>>>>>> deaa3096026652255c0cdf6ec4f576de124dd7d8
