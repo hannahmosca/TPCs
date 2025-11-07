@@ -112,21 +112,17 @@ freshwater_masked <- mask(freshwater_monthly, discharge_mask, maskvalues = FALSE
 
 plot(freshwater_masked[[1]])
 
+# Create a raster for discharge-masked pixels only
+masked_discharge <- is.na(freshwater_masked) & !is.na(freshwater_monthly_thr)
 
-
-plot_raster <- ifel(
-  is.na(freshwater_masked[1]) & !is.na(freshwater_monthly[1]), -999,
-  freshwater_masked
-)
-
-cols <- c("black", terrain.colors(100))  
-breaks <- c(-1000, -998, seq(min(values(freshwater_masked[1]), na.rm=TRUE),
-                             max(values(freshwater_masked[1]), na.rm=TRUE), length.out=100))
-plot(plot_raster,
-     col = cols,
-     breaks = breaks,
+# Plot base freshwater temperature
+plot(freshwater_masked,
+     col = terrain.colors(100),
      colNA = "white",
-     main = "temp")
+     main = "August freshwater temperature (masked by discharge)")
+
+# Overlay masked discharge in black
+plot(masked_discharge, add = TRUE, col = "black", legend = FALSE)
 
 threshold <- 350 #76.86 dg celcius
 freshwater_monthly[freshwater_monthly > threshold] <- NA
