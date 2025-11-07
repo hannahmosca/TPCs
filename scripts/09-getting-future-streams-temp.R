@@ -99,22 +99,31 @@ freshwater_monthly <- "freshwater_monthly.nc"
 freshwater_monthly <- rast((here("raw-data", freshwater_monthly)), subds = "waterTemperature")
 dim(freshwater_monthly) #before removing any values 2160 4320  525
 
-threshold <- 350 #76.86 dg celcius
-freshwater_monthly[freshwater_monthly > threshold] <- NA
-freshwater_monthly_thr <- freshwater_monthly
-names(freshwater_monthly_thr) <- month
+names(freshwater_monthly) <- month
 
 ### mask with discharge values ##
 discharge_rast <- rast(here("raw-data", "discharge_Avg.nc"))
-
-Qlim <- 2 
+res(discharge_rast)
+res(freshwater_monthly)
+Qlim <- 50 
 discharge_mask <- discharge_rast > Qlim
 
-freshwater_masked <- mask(freshwater_monthly_thr, discharge_mask, maskvalues = FALSE)
+freshwater_masked <- mask(freshwater_monthly, discharge_mask, maskvalues = FALSE)
 
 plot(freshwater_masked[[1]])
 
+plot_raster <- freshwater_masked[1]
+ocean_mask <- is.na(freshwater_monthly[1])
+masked_discharge <- is.na(freshwater_monthly[1]) & !ocean_mask
+plot_raster[ocean_mask] <- NA
 
+plot(plot_raster[1],
+     col = terrain.colors(100),
+     colNA = "white")
+     
+threshold <- 350 #76.86 dg celcius
+freshwater_monthly[freshwater_monthly > threshold] <- NA
+freshwater_monthly_thr <- freshwater_monthly
 
 
 
