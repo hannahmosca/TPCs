@@ -112,15 +112,22 @@ freshwater_masked <- mask(freshwater_monthly, discharge_mask, maskvalues = FALSE
 
 plot(freshwater_masked[[1]])
 
-plot_raster <- freshwater_masked[1]
-ocean_mask <- is.na(freshwater_monthly[1])
-masked_discharge <- is.na(freshwater_monthly[1]) & !ocean_mask
-plot_raster[ocean_mask] <- NA
 
-plot(plot_raster[1],
-     col = terrain.colors(100),
-     colNA = "white")
-     
+
+plot_raster <- ifel(
+  is.na(freshwater_masked[1]) & !is.na(freshwater_monthly[1]), -999,
+  freshwater_masked
+)
+
+cols <- c("black", terrain.colors(100))  
+breaks <- c(-1000, -998, seq(min(values(freshwater_masked[1]), na.rm=TRUE),
+                             max(values(freshwater_masked[1]), na.rm=TRUE), length.out=100))
+plot(plot_raster,
+     col = cols,
+     breaks = breaks,
+     colNA = "white",
+     main = "temp")
+
 threshold <- 350 #76.86 dg celcius
 freshwater_monthly[freshwater_monthly > threshold] <- NA
 freshwater_monthly_thr <- freshwater_monthly
