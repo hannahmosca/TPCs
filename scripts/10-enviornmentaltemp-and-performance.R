@@ -421,18 +421,35 @@ freshwater_temps_topt <- freshwater_temps_topt %>%
 #topt is further above mean temp in more variabile enviorneents in marine systems
 var_dif_mean_reg <- ggplot(data = fits_with_temps %>%
          filter(topt_TF == TRUE),
-       aes(x = temp_sd, y = diff_mean, color = enviornment)) +
+       aes(x = temp_sd, y = topt-q_high, color = enviornment)) +
   geom_abline(intercept = 0, slope = -1, color = "black", linetype = "dashed") +
   geom_point(alpha = 0.7) +
   geom_smooth(method = stats::lm) +
   labs(
     x = "thermal variability (temp sd)",
-    y = "mean temp - topt") +
+    y = "topt-q-high") +
   scale_color_manual(
     name = "Environment",
     values = c("marine" = "blue", "freshwater" = "lightgreen")
   ) +
   theme_classic()
+var_dif_mean_reg
+var_dif_mean_reg <- ggplot(data = fits_with_temps %>%
+                             filter(topt_TF == TRUE),
+                           aes(x = temp_sd, y = topt-temp_mean, color = enviornment)) +
+  geom_abline(intercept = 0, slope = -1, color = "black", linetype = "dashed") +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = stats::lm) +
+  labs(
+    x = "thermal variability (temp sd)",
+    y = "topt- mean") +
+  scale_color_manual(
+    name = "Environment",
+    values = c("marine" = "blue", "freshwater" = "lightgreen")
+  ) +
+  theme_classic()
+var_dif_mean_reg
+
 ggsave("var_dif_mean_reg.pdf", plot = var_dif_mean_reg, path = here("figures"), width = 5, height = 4)
 
 var_dif_max_reg <- ggplot(data = fits_with_temps %>%
@@ -463,6 +480,48 @@ extreme_mean_box <- ggplot(fits_with_temps, aes(x = enviornment, y = q_high - te
   theme_classic()
 extreme_mean_box
 ggsave("extreme-mean-box.pdf", plot = extreme_mean_box, path = here("figures"), width = 5, height = 4)
+ggplot(data = fits_with_temps %>%
+                             filter(topt_TF == TRUE),
+                           aes(x = abs_latitude, y = temp_sd, color = enviornment)) +
+  geom_abline(intercept = 0, slope = -1, color = "black", linetype = "dashed") +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = stats::lm) +
+  labs(
+    x = "latitude",
+    y = "thermal variability") +
+  scale_color_manual(
+    name = "Environment",
+    values = c("marine" = "blue", "freshwater" = "lightgreen")
+  ) +
+  theme_classic()
 
+
+ggplot(data = fits_with_temps %>%
+         filter(topt_TF == TRUE),
+       aes(x = abs_latitude, y = temp_sd, color = enviornment)) +
+  geom_abline(intercept = 0, slope = -1, color = "black", linetype = "dashed") +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = stats::lm) +
+  labs(
+    x = "latitude",
+    y = "thermal variability") +
+  scale_color_manual(
+    name = "Environment",
+    values = c("marine" = "blue", "freshwater" = "lightgreen")
+  ) +
+  theme_classic()
+
+
+ggplot(data = fits_with_temps) +
+  geom_point(aes(x = abs_latitude, y = q_low, color = enviornment)) +
+  geom_point(aes(x = abs_latitude, y = q_high, color = enviornment), shape = 2)+
+  labs(
+    x = "abs latitude",
+    y = "extremes") +
+  scale_color_manual(
+    name = "Environment",
+    values = c("marine" = "blue", "freshwater" = "lightgreen")
+  ) +
+  theme_classic()
 
 
