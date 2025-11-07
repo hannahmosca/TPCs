@@ -103,6 +103,21 @@ threshold <- 350 #76.86 dg celcius
 freshwater_monthly[freshwater_monthly > threshold] <- NA
 freshwater_monthly_thr <- freshwater_monthly
 names(freshwater_monthly_thr) <- month
+
+### mask with discharge values ##
+discharge_rast <- rast(here("raw-data", "discharge_Avg.nc"))
+
+Qlim <- 2 
+discharge_mask <- discharge_rast > Qlim
+
+freshwater_masked <- mask(freshwater_monthly_thr, discharge_mask, maskvalues = FALSE)
+
+plot(freshwater_masked[[1]])
+
+
+
+
+
 #getting non thresholded data to compare
 freshwater_monthly <- "freshwater_monthly.nc"
 freshwater_monthly <- rast((here("raw-data", freshwater_monthly)), subds = "waterTemperature")
