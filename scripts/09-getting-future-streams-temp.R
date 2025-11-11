@@ -96,20 +96,31 @@ names(freshwater_monthly)
 writeCDF(freshwater_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
 =======
 #### 02: average across weeks to get monthly ####
-  #go from weekly to monthly
-  r_monthly <- tapp(freshwater_r_temp, month_group, mean)  
+  ##filter out high values//make them NA
+  threshold <- 350 # 76.86°C
+  freshwater_r_temp[freshwater_r_temp > 350] <- NA
+  
+  ##convert to celcius
+  freshwater_r_temp_cel <- freshwater_r_temp - 273.15
+  
+  #naming thing
+  dates <- as.Date(names(freshwater_r_temp_cel))  # assuming layer names are dates
+  month_group <- format(dates, "%Y-%m")
+  
+  ##average from weekly → monthly
+  r_monthly <- tapp(freshwater_r_temp_cel, month_group, function(x) mean(x, na.rm = TRUE))
+  
+  ## adjust monthly layer names
+  unique_month_group <- unique(month_group)
+  month <- as.Date(paste0(unique_month_group, "-01"))
+  names(r_monthly) <- month
   
   #make space/check out raster
   rm(freshwater_r_temp)
   names(r_monthly)
   head(r_monthly)
   res(r_monthly)
-#quick layer name adjustment
-  dates <- as.Date(names(freshwater_r_temp))
-  month_group <- format(dates, "%Y-%m")
-  unique_month_group <- unique(month_group)
-  month <- as.Date(paste0(unique_month_group, "-01"))
-  names(r_monthly) <- month
+
   
 #### 03: save file locally so don't have to do this computation again ####
 writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
