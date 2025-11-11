@@ -76,7 +76,7 @@ library(tidyverse)
   rm(r_temp2020thr2025)
   rm(r_temp2020thr2029)
 
-<<<<<<< HEAD
+
 #### freshwater temp data for all locations monthly averages ####
 #convert names to dates
 dates <- as.Date(names(freshwater_r_temp))
@@ -94,7 +94,7 @@ names(freshwater_monthly) <- month
 names(freshwater_monthly)
 #save file locally so don't have to do this computation again
 writeCDF(freshwater_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
-=======
+
 #### 02: average across weeks to get monthly ####
   ##filter out high values//make them NA
   threshold <- 350 # 76.86°C
