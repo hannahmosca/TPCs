@@ -18,9 +18,18 @@ names(freshwater_monthly)
 #need to rename monthly values
 dates <- seq(as.Date("1982-01-01"), as.Date("2025-09-01"), by = "month")
 names(freshwater_monthly) <- dates
-sum_stat_values <- global(freshwater_monthly, fun=c("mean", "sd", "min", "max"), na.rm = TRUE)
-quantiles <- global(freshwater_monthly, quantile, probs=c(0.025, 0.975), na.rm = TRUE)
-freshwater_summary <- cbind(sum_stat_values, quantiles)
+
+freshwater_summary <- app(
+  freshwater_monthly,
+  fun = function(x) {
+    c(mean = mean(x, na.rm = TRUE),
+      sd   = sd(x, na.rm = TRUE),
+      min  = min(x, na.rm = TRUE),
+      max  = max(x, na.rm = TRUE),
+      q2.5 = quantile(x, 0.025, na.rm = TRUE),
+      q97.5= quantile(x, 0.975, na.rm = TRUE))
+  }
+)
 new_layers <- 
 discharge <- rast(here("raw-data", "discharge_Avg.nc"))
 coastline <- ne_coastline(returnclass = "sf", scale = 110)
