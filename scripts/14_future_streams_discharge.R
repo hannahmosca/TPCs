@@ -1,20 +1,39 @@
 ### the script is to work with masking the freshwater values with no discharge###
-#first try with the one that I got from Nik
-rm(list = ls())
+rm(list=ls())
+#load libraries
 library(terra)
 library(ncdf4)
 library(here)
 library(dplyr)
 library(matrixStats)
 library(ggplot2)
-library(rnaturalearth)
-library(rnaturalearthdata)
 install.packages("rnaturalearthdata")
 install.packages("rnaturalearth")
-##load tggplot2##load temp raster and load discharge raster
-freshwater_annual <- rast((here("raw-data", "waterTempAnnual_merged_1979-2014.nc")))
+library(rnaturalearth)
+library(rnaturalearthdata)
+##load temp raster and load discharge raster files
+freshwater_monthly <- rast((here("processed-data", "freshwater_monthly.nc")))
+names(freshwater_monthly)
+
+#need to rename monthly values
+dates <- seq(as.Date("1982-01-01"), as.Date("2025-09-01"), by = "month")
+names(freshwater_monthly) <- dates
+sum_stat_values <- global(freshwater_monthly, fun=c("mean", "sd", "min", "max"), na.rm = TRUE)
+quantiles <- global(freshwater_monthly, quantile, probs=c(0.025, 0.975), na.rm = TRUE)
+freshwater_summary <- cbind(sum_stat_values, quantiles)
+new_layers <- 
 discharge <- rast(here("raw-data", "discharge_Avg.nc"))
 coastline <- ne_coastline(returnclass = "sf", scale = 110)
+
+
+
+
+
+
+
+
+
+
 #check the spatial stuff, ensure all matches
 res(discharge)
 ext(discharge)
