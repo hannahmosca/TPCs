@@ -7,6 +7,7 @@ library(terra)
 library(here)
 library(dplyr)
 library(tidyverse)
+library(viridis)
 
 #### 01: Merge 10-15 yr raster chunks of weekly temp data ####
 #14 year file chunks, historical and present weekly 
@@ -135,7 +136,7 @@ writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
 #### 05: masking discharge ####
   rm(list=ls()) #make room/clean environment
   ##load data
-  freshwater_temp <- rast((here("processed-data", "freshwater_summary_cel"))) #average across months from 1982-2025
+  freshwater_temp <- rast((here("processed-data", "freshwater_monthly_summarized.nc"))) #average across months from 1982-2025
   discharge <- rast(here("raw-data", "discharge_Avg.nc"))
   coastline <- ne_coastline(returnclass = "sf", scale = 110)
   
@@ -145,7 +146,42 @@ writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
   res(freshwater_temp)
   res(discharge)
   
+  ##crop discharge file
+  discharge_aligned <- resample(discharge, freshwater_temp, method = "near")
   
+  ##check out files
+  nlyr(freshwater_temp) #6 layers
+  nlyr(discharge) #1 layer
+  names(freshwater_temp)
+  names_fresh_temp <- c("mean", "sd", "min", "max", "q_low", "q_high")
+  names(freshwater_temp) <- names_fresh_temp
+  
+  ## make mask
+  Qlim <- 5 # this defines the limit for discharge
+  discharge_mask <- discharge_aligned >= Qlim
+  plot(discharge_mask)
+  ## mask freshwater temp with discharge
+  freshwater_masked <- mask(freshwater_temp, discharge_mask, maskvalues = FALSE)
+  df <- as.data.frame(freshwater_masked, xy = TRUE, na.rm = TRUE)
+  
+  ### map of freshwater temp means with points overlaid
+d <-  ggplot(df) +
+    geom_raster(aes(x = x, y = y, fill = mean), interpolate = TRUE) +
+    scale_fill_viridis(option="magma") +
+    geom_sf(data = coastline,
+            color = "black",
+            fill = NA,
+            size = 0.9) +
+    geom_spatvector(data = new_my_points, color = "red", size = 1) +
+    coord_sf(xlim = c(-180, 180),
+             ylim = c(-50, 90)) +
+    theme_void() +
+    theme(legend.position = "bottom")
+  d
+  ## save map
+  ggsave("freshwater_map_wpoints.pdf", plot = d, path = here("figures"), width = 8, height = 5)
+  
+
 #### 06: extracting mypoint data ####
   ## load required datasets
   datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
@@ -160,7 +196,27 @@ writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
   unique_lat_long <- freshwater %>%
     select(latitude, longitude) %>%
     distinct()
+  
   #check where points fall, some estuaries to be dealt with
   new_my_points <- vect(unique_lat_long, geom = c("longitude", "latitude"), crs = crs(freshwater_temp))
-
+  library(tidyterra)
+  ggplot() +
+    geom_spatraster(data = freshwater_masked[[1]]) +
+    geom_spatvector(data = new_my_points, color = "red")
   
+  #extract points from non discharge masked data
+  point_means <- terra::extract(freshwater_temp[[1]], new_my_points, method = "simple", search_radius = 30000)
+  point_sd <- terra::extract(freshwater_temp[[2]], new_my_points, method = "simple", search_radius = 30000)
+  point_min <- terra::extract(freshwater_temp[[3]], new_my_points, method = "simple", search_radius = 30000)
+  point_max <- terra::extract(freshwater_temp[[4]], new_my_points, method = "simple", search_radius = 30000)
+  point_q_low <- terra::extract(freshwater_temp[[5]], new_my_points, method = "simple", search_radius = 30000)
+  point_q_high <- terra::extract(freshwater_temp[[6]], new_my_points, method = "simple", search_radius = 30000)
+  
+  #combine to get summary stats of mypoints data
+  all <- cbind(point_means, point_sd, point_min, point_max, point_q_low, point_q_high) %>% select(distance, mean, sd, min, max, q_low, q_high)
+  #add lat and long back
+  all$latitude = unique_lat_long$latitude
+  all$longitude = unique_lat_long$longitude
+  
+  ## save my point data
+  saveRDS(all, file = here("processed-data", "freshwater_temperatures_my_points.RDS"))
