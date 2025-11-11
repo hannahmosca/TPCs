@@ -125,7 +125,6 @@ writeCDF(freshwater_monthly, filename = here("processed-data", "freshwater_month
   
 #### 03: save file locally so don't have to do this computation again ####
 writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
->>>>>>> 4c96e9213abb73a2150a99bc40f6d13db4449252
 
 #### 04: compute summary stats on raster ####
   ## load in raster, check names/rename if neccessary
