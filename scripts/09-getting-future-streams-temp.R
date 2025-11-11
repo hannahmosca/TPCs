@@ -77,6 +77,25 @@ library(viridis)
   rm(r_temp2020thr2025)
   rm(r_temp2020thr2029)
 
+
+#### freshwater temp data for all locations monthly averages ####
+#convert names to dates
+dates <- as.Date(names(freshwater_r_temp))
+month_group <- format(dates, "%Y-%m")
+unique_month_group <- unique(month_group)
+month <- as.Date(paste0(unique_month_group, "-01"))
+#go from weekly to monthly
+r_monthly <- tapp(freshwater_r_temp, month_group, mean)  
+rm(freshwater_r_temp)
+names(r_monthly)
+head(r_monthly)
+res(r_monthly)
+freshwater_monthly <- r_monthly
+names(freshwater_monthly) <- month
+names(freshwater_monthly)
+#save file locally so don't have to do this computation again
+writeCDF(freshwater_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
+
 #### 02: average across weeks to get monthly ####
   ##filter out high values//make them NA
   threshold <- 350 # 76.86°C
@@ -106,6 +125,7 @@ library(viridis)
   
 #### 03: save file locally so don't have to do this computation again ####
 writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
+>>>>>>> 4c96e9213abb73a2150a99bc40f6d13db4449252
 
 #### 04: compute summary stats on raster ####
   ## load in raster, check names/rename if neccessary
