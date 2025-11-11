@@ -90,8 +90,11 @@ rm(freshwater_r_temp)
 names(r_monthly)
 head(r_monthly)
 res(r_monthly)
+freshwater_monthly <- r_monthly
+names(freshwater_monthly) <- month
+names(freshwater_monthly)
 #save file locally so don't have to do this computation again
-writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
+writeCDF(freshwater_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
 
 
 #### filtering out extremes for all locations freshwater ####
