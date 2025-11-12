@@ -293,60 +293,8 @@ a <- ggplot(
   )
 
 a
-ggsave("dataset_type_his.pdf", plot = a, path = here("figures"), width = 7, height = 4)
+c
 
-###for now i am being conservative on what ctmin. and maxes we have--so if want to be more lenient can refilter the topt/irreg categories for thme later
-
-#####DATA VIS CHECKING #####
-responses <- curves %>%
-  select(curve_ID, response_type, response_unit) %>%
-  distinct()
-curve_labels <- responses %>%
-  mutate(label = paste0(response_type, " (", curve_ID, ")")) %>%
-  select(curve_ID, label) %>%
-  deframe()
-library(ggforce)
-
-ggplot() +
-  geom_point(data = distinct_curves %>%
-               filter(dataset_type == "topt"),
-             aes(x = test_temp, y = response_value)) +
-  # geom_point(data = params %>%
-  #              filter(curve_ID %in% opt_list),
-  #            aes(x = topt, y = y_value_topt, color = model)) +
-  # geom_point(data = top_3_models %>%
-  #              filter(curve_ID %in% opt_list),
-  #            aes(x = CTmin, y = y_value_ctmin, color = model)) +
-  # geom_point(data = top_3_models %>%
-  #              filter(curve_ID %in% opt_list),
-  #            aes(x = CTmax, y = y_value_ctmax, color = model)) +
-  # geom_line(data = predictions %>%
-  #             filter(curve_ID %in% opt_list) %>%
-  #             filter(best_mod == "yes"), 
-  #           aes(x = test_temp, y = .fitted, color = model), linewidth = 1) +
-  # geom_line(data = predictions %>%
-  #             filter(curve_ID %in% opt_list),
-  #           aes(x = test_temp, y = .fitted, color = model), linewidth = .2) +
-  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 4, nrow = 4, page = 1,
-                      labeller = labeller(curve_ID = curve_labels)) +
-  scale_color_manual(
-    values = c(
-      "johnsonlewin" = "slateblue", 
-      "lactin2" = "#4DAF4A",  
-      "oneill"= "magenta", 
-      "ratkowsky" = "yellow",  
-      "rezende" = "#A65628",  
-      "spain" = "royalblue3",  
-      "thomas" = "#999999",  
-      "weibull" = "black"  ,
-      "hinshelwood" = "aquamarine",
-      "briere" = "lightblue", 
-      "gaussian" = "maroon",
-      "quadratic" = "green"
-    )
-  ) +
-  theme_minimal() +
-  labs(x = "Test Temperature", y = "Response", color = "Model")
 
 
 ###OUTPUT###
