@@ -8,3 +8,8 @@ freshwater_monthly.nc
 freshwater_all_df_no_threshold.RDS
 freshwater_all_df_threshold.RDS
 >>>>>>> 4883adfcc8fb297088a23a223fd38ceadadb7996
+marine_monthly.nc
+marine_monthly1982_01to2025_09.nc
+sst_monthly_summarized.nc
+freshwater_monthly_summarized.nc
+.DS_Store
