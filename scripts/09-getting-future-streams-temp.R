@@ -78,24 +78,6 @@ library(viridis)
   rm(r_temp2020thr2029)
 
 
-#### freshwater temp data for all locations monthly averages ####
-#convert names to dates
-dates <- as.Date(names(freshwater_r_temp))
-month_group <- format(dates, "%Y-%m")
-unique_month_group <- unique(month_group)
-month <- as.Date(paste0(unique_month_group, "-01"))
-#go from weekly to monthly
-r_monthly <- tapp(freshwater_r_temp, month_group, mean)  
-rm(freshwater_r_temp)
-names(r_monthly)
-head(r_monthly)
-res(r_monthly)
-freshwater_monthly <- r_monthly
-names(freshwater_monthly) <- month
-names(freshwater_monthly)
-#save file locally so don't have to do this computation again
-writeCDF(freshwater_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
-
 #### 02: average across weeks to get monthly ####
   ##filter out high values//make them NA
   threshold <- 350 # 76.86°C
@@ -108,7 +90,7 @@ writeCDF(freshwater_monthly, filename = here("processed-data", "freshwater_month
   dates <- as.Date(names(freshwater_r_temp_cel))  # assuming layer names are dates
   month_group <- format(dates, "%Y-%m")
   
-  ##average from weekly → monthly
+  ##average from weekly to monthly
   r_monthly <- tapp(freshwater_r_temp_cel, month_group, function(x) mean(x, na.rm = TRUE))
   
   ## adjust monthly layer names
@@ -121,10 +103,19 @@ writeCDF(freshwater_monthly, filename = here("processed-data", "freshwater_month
   names(r_monthly)
   head(r_monthly)
   res(r_monthly)
+  plot(r_monthly[[1]])
+  ## save file locally so don't have to do this computation again
+  writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
 
+<<<<<<< HEAD
+=======
   
 #### 03: save file locally so don't have to do this computation again ####
 writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
+<<<<<<< HEAD
+>>>>>>> 98b2fa1ecad56c981562f599c765d92d9925b77e
+=======
+>>>>>>> 98b2fa1ecad56c981562f599c765d92d9925b77e
 
 #### 04: compute summary stats on raster ####
   ## load in raster, check names/rename if neccessary
@@ -134,23 +125,23 @@ writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
   dates <- seq(as.Date("1982-01-01"), as.Date("2025-09-01"), by = "month")
   names(freshwater_monthly) <- dates
   
+  
   ## computing summary stats across layers
-  freshwater_summary <- app(
+  mean_raster <- app(freshwater_monthly, mean, na.rm = TRUE)
+  sd_raster <- app(freshwater_monthly, sd, na.rm = TRUE)
+  min_raster <- app(freshwater_monthly, min, na.rm = TRUE)
+  max_raster <- app(freshwater_monthly, max, na.rm = TRUE)
+  quant_raster <- app(
     freshwater_monthly,
     fun = function(x) {
-      c(mean = mean(x, na.rm = TRUE),
-        sd   = sd(x, na.rm = TRUE),
-        min  = min(x, na.rm = TRUE),
-        max  = max(x, na.rm = TRUE),
-        q2.5 = quantile(x, 0.025, na.rm = TRUE),
-        q97.5= quantile(x, 0.975, na.rm = TRUE))
+      x <- x[is.finite(x)]
+      if (length(x) == 0) return(c(NA,NA))
+      quantile(x, c(0.025, 0.975))
     }
   )
-  ## convert across to celcius
-  freshwater_summary_cel <- freshwater_summary - 273.15
-  
-  ## save as seperate file
-  writeCDF(freshwater_summary_cel, filename = here("processed-data", "freshwater_monthly_summarized.nc"))
+ freshwater_summary <- c(mean_raster, sd_raster, min_raster, max_raster, quant_raster)
+ names(freshwater_summary) <- c("mean", "sd", "min", "max", "q2.5", "q97.5")
+ writeCDF(freshwater_summary, filename = here("processed-data", "freshwater_monthly_summarized.nc"))
 
 #### 05: masking discharge ####
   rm(list=ls()) #make room/clean environment
