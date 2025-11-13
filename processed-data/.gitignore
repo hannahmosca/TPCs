@@ -9,11 +9,18 @@ freshwater_all_df_no_threshold.RDS
 freshwater_all_df_threshold.RDS
 >>>>>>> 4883adfcc8fb297088a23a223fd38ceadadb7996
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 98b2fa1ecad56c981562f599c765d92d9925b77e
 marine_monthly.nc
 marine_monthly1982_01to2025_09.nc
 sst_monthly_summarized.nc
 freshwater_monthly_summarized.nc
+<<<<<<< HEAD
 >>>>>>> 98b2fa1ecad56c981562f599c765d92d9925b77e
 .DS_Store
 sst_temperatures_my_points.RDS
+=======
+.DS_Store
+>>>>>>> 98b2fa1ecad56c981562f599c765d92d9925b77e

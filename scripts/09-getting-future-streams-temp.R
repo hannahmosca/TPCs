@@ -112,6 +112,9 @@ library(viridis)
   
 #### 03: save file locally so don't have to do this computation again ####
 writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
+<<<<<<< HEAD
+>>>>>>> 98b2fa1ecad56c981562f599c765d92d9925b77e
+=======
 >>>>>>> 98b2fa1ecad56c981562f599c765d92d9925b77e
 
 #### 04: compute summary stats on raster ####
