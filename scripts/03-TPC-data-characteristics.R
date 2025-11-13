@@ -31,7 +31,7 @@ library(maps)
 world_map <- map_data("world")
 #### latitude and longitude #### want to make the dots sized by how many datasets in each study
 ## also could be cool to plot it by the median temperature tested
-ggplot() +
+map <- ggplot() +
   geom_polygon(data = world_map, aes(x = long, y = lat, group = group), 
                fill = "lightgrey", color = "white") +
   geom_point(data = curves_unique %>%
@@ -55,19 +55,43 @@ ggplot() +
     legend.position = "none") +
   scale_color_manual(values = c("oceanic" = "blue3",   
                                 "terrestrial" = "palegreen4"))
+map
+curves_unique <- curves_unique %>%
+  mutate(response_type_group = as.factor(response_type_group))
+#### response groups
+library(forcats)
+response <- ggplot(curves_unique, aes(x = fct_infreq(response_type_group))) +
+  geom_bar(fill = "black", color = "lightgrey", alpha = 0.9) +
+  xlab("Response") +
+  ylab("Count") +
+  theme_minimal() +
+  scale_x_discrete(
+    labels = c(
+      "growth" = "Somatic Growth",
+      "swimming" = "Swimming",
+      "metabolism" = "Metabolism", 
+      "feeding" = "Feeding",
+      "reproduction" = "Reproduction",
+      "predation" = "Predation",
+      "survival" = "Survival")) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
 
-
-
+response
 
 
 ### histogram of # of test temperatures 
 a <- ggplot(curves_unique, aes(x = n_unique_temps)) +
-  geom_histogram(binwidth=1, fill="darkblue", color="lightgrey", alpha=0.9) +
+  geom_histogram(binwidth=1, fill="black", color="lightgrey", alpha=0.9) +
   theme_minimal() + 
   labs(x = "Number of Temperatures", y = "Number of datasets") + 
   theme(
-    text = element_text(size = 12),
-    plot.background = element_rect(color = "black", linewidth = 1)) 
+    text = element_text(size = 9),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank())
 a
 ggsave("histogram_test_temps.pdf", plot = a, path = here("figures"), width = 5, height = 4)
 
@@ -100,18 +124,28 @@ family <- ggplot(data = curves_unique_with_taxa, aes(x = reorder(family, dataset
   theme(
     panel.grid.major = element_blank(),   
     panel.grid.minor = element_blank(),   
-    text = element_text(size = 11),
-    plot.background = element_rect(color = "black", linewidth = 1)) +
+    text = element_text(size = 11)) +
   scale_y_continuous(expand = c(0, 0))
 family
 ggsave("histogram_families.pdf", plot = family, path = here("figures"), width = 5, height = 6)
 
+#### combine family, response, and map ####
+library(patchwork)
+final_plot <- (map / (family + response + plot_layout(widths = c(1, 1.3)))) + 
+  plot_layout(heights = c(1.2, 1.2)) +
+  plot_annotation(tag_levels = "A",
+                  theme = theme())
+final_plot
+ggsave(
+  filename = here("figures", "extracted_summary.png"),  # Corrected filename placement
+  plot = final_plot, 
+  width = 9, 
+  height = 9, 
+  dpi = 300, 
+  device = "png"
+)
 #histogram of habitat types and want 3 bars split into proportions have specific habitats
-habitat_types <- curves_unique %>%
-  select(curve_ID, study_ID, habitat, habitat_water, land_or_sea)
 
-ggplot(data = habitat_types, aes(fill = habitat, y = curve_ID, x = habitat_water)) + 
-  geom_bar(position = "stack", stat = "identity")
 
 
 
@@ -173,64 +207,3 @@ freq_tested <- ggplot(data = temps_2, aes(x = test_temp)) +
     plot.background = element_rect(color = "black", linewidth = 1)) 
 freq_tested
 ggsave("temp_Freq_tested_hist.pdf", plot = freq_tested, path = here("figures"), width = 5, height = 4)
-
-
-#habitat
-habitat_types <- curves %>%
-  dplyr::select(study_ID, habitat, habitat_water, land_or_sea) %>%
-  distinct()
-
-habitat_types <- habitat_types %>%
-  group_by(habitat) %>%
-  mutate(count = n()) %>%
-  ungroup() %>%
-  mutate(habitat = factor(habitat, levels = names(sort(tapply(count, habitat, sum), decreasing = FALSE))))
-habitat_types$habitat <- factor(habitat_types$habitat, 
-                                levels = levels(habitat_types$habitat))
-
-habitat_summary <- habitat_types %>%
-  group_by(habitat) %>%
-  summarise(count = n()) %>%
-  ungroup() %>%
-  mutate(perc = count / sum(count) * 100)  # optional: percent
-donut_data <- habitat_types %>%
-  group_by(habitat_water, habitat) %>%   # water_type: freshwater, brackish, marine
-  summarise(count = n(), .groups = "drop") %>%
-  mutate(
-    fraction = count / sum(count),
-    ymax = cumsum(fraction),
-    ymin = lag(ymax, default = 0)
-  )
-
-freshwater_palette <- colorRampPalette(c("#00441b", "forestgreen", "lightgreen"))(8)  # 8 freshwater habitats
-brackish_palette   <- colorRampPalette(c("goldenrod3", "#ffe135", "yellow"))(4)  # 4 brackish habitats
-marine_palette     <- colorRampPalette(c("#003366", "#1f78b4", "lightblue1"))(14) # 14 marine habitats
-my_colors <- c(
-  setNames(freshwater_palette, donut_data$habitat[donut_data$habitat_water == "freshwater"]),
-  setNames(brackish_palette,   donut_data$habitat[donut_data$habitat_water == "brackish"]),
-  setNames(marine_palette,     donut_data$habitat[donut_data$habitat_water == "marine"])
-)
-
-donut_data <- habitat_types %>%
-  group_by(habitat_water, habitat) %>%
-  summarise(count = n(), .groups = "drop") %>%
-  arrange(habitat_water) %>%
-  mutate(
-    fraction = count / sum(count),
-    ymax = cumsum(fraction),
-    ymin = lag(ymax, default = 0),
-    mid = (ymin + ymax) / 2,  # middle of each segment for label placement
-    angle = 90 - 360 * mid,          # mid is the middle of each slice
-    hjust = ifelse(angle < -90, 1, 0), # flip labels on left side
-    angle = ifelse(angle < -90, angle + 180, angle) # rotate upside-down labels
-  )
-
-ggplot(donut_data) +
-  geom_rect(aes(ymin = ymin, ymax = ymax, xmin = 3, xmax = 4, fill = habitat), color = "white") +
-  geom_segment(aes(x = 4, xend = 4.5, y = mid, yend = mid), color = "gray40") +
-  geom_text(aes(x = 4.55, y = mid, label = habitat, angle = angle, hjust = hjust), size = 3) +
-  coord_polar(theta = "y") +
-  xlim(c(0, 5)) +
-  scale_fill_manual(values = my_colors) +
-  theme_void() +
-  theme(legend.position = "none")

@@ -9,7 +9,7 @@ library(here)
 library(stringr)
 
 #### 2. load most up to date extraction datasheet ####
-filename <- "data_extraction_06_11_2025.csv"
+filename <- "data_extraction_12_11_2025.csv"
 raw_data <- read.csv(here("raw-data", filename))
 
 #### 3. initial data cleaning ####
