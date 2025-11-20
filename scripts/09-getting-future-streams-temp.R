@@ -8,7 +8,8 @@ library(here)
 library(dplyr)
 library(tidyverse)
 library(viridis)
-
+library(tidyterra)
+library(rnaturalearth)
 #### 01: Merge 10-15 yr raster chunks of weekly temp data ####
 #14 year file chunks, historical and present weekly 
 
@@ -107,15 +108,11 @@ library(viridis)
   ## save file locally so don't have to do this computation again
   writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
 
-<<<<<<< HEAD
-=======
+
   
 #### 03: save file locally so don't have to do this computation again ####
 writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
-<<<<<<< HEAD
->>>>>>> 98b2fa1ecad56c981562f599c765d92d9925b77e
-=======
->>>>>>> 98b2fa1ecad56c981562f599c765d92d9925b77e
+
 
 #### 04: compute summary stats on raster ####
   ## load in raster, check names/rename if neccessary
@@ -176,13 +173,11 @@ writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
   
   ### map of freshwater temp means with points overlaid
 d <-  ggplot(df) +
-    geom_raster(aes(x = x, y = y, fill = mean), interpolate = TRUE) +
-    scale_fill_viridis(option="magma") +
-    geom_sf(data = coastline,
-            color = "black",
-            fill = NA,
-            size = 0.9) +
-    geom_spatvector(data = new_my_points, color = "red", size = 1) +
+    geom_sf(data = coastline, color = "black", fill = NA, linewidth = 0.2, inherit.aes = FALSE) +
+    geom_raster(aes(x=x, y=y, fill=mean), interpolate = TRUE) +    
+    scale_fill_viridis() +
+    geom_spatvector(data = new_my_points,
+                    color = "white", fill = "red", size = 1.5, shape = 21, stroke = 0.5) +
     coord_sf(xlim = c(-180, 180),
              ylim = c(-50, 90)) +
     theme_void() +
@@ -190,6 +185,9 @@ d <-  ggplot(df) +
   d
   ## save map
   ggsave("freshwater_map_wpoints.pdf", plot = d, path = here("figures"), width = 8, height = 5)
+  
+  #save masked freshwater 
+  writeCDF(freshwater_masked, filename = here("processed-data", "freshwater_summarized_masked.nc"))
   
 
 #### 06: extracting mypoint data ####
@@ -223,7 +221,7 @@ d <-  ggplot(df) +
   point_q_high <- terra::extract(freshwater_temp[[6]], new_my_points, method = "simple", search_radius = 30000)
   
   #combine to get summary stats of mypoints data
-  all <- cbind(point_means, point_sd, point_min, point_max, point_q_low, point_q_high) %>% select(distance, mean, sd, min, max, q_low, q_high)
+  all <- cbind(point_means, point_sd, point_min, point_max, point_q_low, point_q_high) %>% select(mean, sd, min, max, q_low, q_high)
   #add lat and long back
   all$latitude = unique_lat_long$latitude
   all$longitude = unique_lat_long$longitude
