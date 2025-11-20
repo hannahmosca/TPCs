@@ -1,67 +1,98 @@
 ### this script is for testing hypoths ###
-#packages
-install.packages("lmerTest")
-library(lme4)
-library(lmerTest)
-library(performance)
-library(car)
+  #packages
+  install.packages("lmerTest")
+  library(lme4)
+  library(lmerTest)
+  library(performance)
+  library(car)
+  library(here)
+  library(dplyr)
+  library(tidyverse)
 
-library(here)
-library(dplyr)
-library(tidyverse)
-#load data
-fitted_datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
-curves <- readRDS(here('processed-data', 'wild-tpcs.Rds'))
-freshwater_temps <- readRDS(here("processed-data", "freshwater_temperatures_my_points.RDS"))
-##need to remove 2_0065, is in a bay / cod --=> marine
-freshwater_temps <- freshwater_temps %>%
-  filter(study_ID != "2_0065")
-marine_sst <- readRDS(here("processed-data", "marine_sst_raw_temp.RDS"))
-
-fitted_datasets <- fitted_datasets %>%
-  mutate(land_or_sea = ifelse(land_or_sea == "terrestrial", "freshwater", "marine"))
-
-#combine temperature data
-#### need to do this in their intiial making files ####
-marine_sst <- marine_sst %>%
-  rename(temp_mean = sst_mean) %>%
-  rename(temp_sd = sst_sd) %>%
-  rename(temp_min = sst_min) %>%
-  rename(temp_max = sst_max) %>%
-  rename(temp_median = sst_median) %>%
-  rename(temp_range = sst_range) %>%
-  mutate(enviornment = "marine") %>%
-  select(-(ID)) %>%
-  rowwise() %>%
-  mutate(
-    q_low = quantile(c_across(`1982-01-01`:`2025-09-01`), probs = 0.025, na.rm = TRUE),
-    q_high = quantile(c_across(`1982-01-01`:`2025-09-01`), probs = 0.975, na.rm = TRUE)
-  ) %>%
-  ungroup() %>%
-    select(enviornment, latitude, longitude, study_ID, species_ID, distance, temp_mean, temp_median, temp_sd, temp_min, q_low, temp_max, q_high, temp_range)
-freshwater_temps <- freshwater_temps %>%
-  rename(q_low = temp_q_low) %>%
-  rename(q_high = temp_q_high) %>%
-  mutate(enviornment = "freshwater") %>%
-  select(enviornment, latitude, longitude, study_ID, species_ID, distance, temp_mean, temp_median, temp_sd, temp_min, q_low, temp_max, q_high, temp_range)
-
-temp_data_all <- rbind(freshwater_temps, marine_sst)
-temp_data_all <- temp_data_all %>%
-  inner_join(curves %>% select(curve_ID, latitude, longitude, study_ID, species_ID), join_by(latitude, longitude, study_ID, species_ID)) %>%
-  distinct() %>%
-  select(-(c(latitude, longitude, study_ID, species_ID)))
-
-fits_with_temps <- fitted_datasets %>%
-  left_join(temp_data_all, join_by(curve_ID))
+  #load data
+  fitted_datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
+  fitted_datasets <- fitted_datasets %>%
+    mutate(land_or_sea = ifelse(land_or_sea == "terrestrial", "freshwater", "marine"))
+  curves <- readRDS(here('processed-data', 'wild-tpcs.Rds'))
+  
+  ##all temperatures
+  #freshwater all
+  all_freshwater_rast <- rast((here("processed-data", "freshwater_summarized_masked.nc"))) #average masked across months from 1982-2025 %>%
+  names_temp <- c("mean", "sd", "min", "max", "q_low", "q_high")
+  names(all_freshwater_rast) <- names_temp
+  all_freshwater <- as.data.frame(all_freshwater_rast, xy = TRUE, na.rm = TRUE)
+  all_freshwater <- all_freshwater %>%
+    rename(longitude = x) %>%
+    rename(latitude = y)
+  #marine all
+  all_marine_rast <- rast((here("processed-data", "sst_monthly_summarized.nc"))) 
+  names(all_marine_rast) <- names_temp
+  all_marine <- as.data.frame(all_marine_rast, xy = TRUE, na.rm = TRUE)
+  all_marine <- all_marine %>%
+    rename(longitude = x) %>%
+    rename(latitude = y)
+  
+  ##point data
+  freshwater_points <- readRDS(here("processed-data", "freshwater_temperatures_my_points.RDS"))
+  marine_points <- readRDS(here("processed-data", "sst_temperatures_my_points.RDS"))
   
 
 
+  ##### combine all temperature data ####
+  all_freshwater <- all_freshwater %>%
+    mutate(enviornment = "freshwater")
+  freshwater_points <- freshwater_points %>%
+    mutate(enviornment = "freshwater") %>%
+    rename(q2.5 = q_low) %>%
+    rename(q97.5 = q_high)
+  all_marine <- all_marine %>%
+   mutate(enviornment = "marine")
+  marine_points <- marine_points %>%
+    mutate(enviornment = "marine")
+  
+temp_data_all <- rbind(all_freshwater, all_marine)
+point_data_all <- rbind(freshwater_points, marine_points) %>%
+  select(latitude, longitude, everything())
+
+
+
+fits_with_temps <- fitted_datasets %>%
+  left_join(point_data_all, join_by(latitude, longitude))
+  
+fits_with_temps <- fits_with_temps %>%
+  left_join(breadth_summary %>% dplyr::select(curve_ID, model, tmin_breadth, tmax_breadth, my_breadth), join_by(curve_ID, model))
+
+ggplot() +
+  geom_point(data = fits_with_temps %>% 
+                      filter(breadth_TF == TRUE) %>%
+                      filter(enviornment == "marine"), 
+                    aes(x = abs_latitude, y = topt), color = "red") +
+  geom_point(data = fits_with_temps %>% 
+               filter(breadth_TF == TRUE) %>%
+               filter(enviornment == "freshwater"), 
+             aes(x = abs_latitude, y = topt), color = "red") +
+  geom_point(data = fits_with_temps %>% 
+               filter(breadth_TF == TRUE),
+             aes(x = abs_latitude, y = mean), color = "black") +
+  geom_linerange(data = fits_with_temps %>% 
+                   filter(breadth_TF == TRUE) %>%
+                   filter(enviornment == "marine"), 
+                 aes(x = abs_latitude, ymin = tmin_breadth, ymax = tmax_breadth), color = "darkblue", linewidth = 1, alpha = .3) +
+  geom_linerange(data = fits_with_temps %>% 
+                   filter(breadth_TF == TRUE) %>%
+                   filter(enviornment == "freshwater"), 
+                 aes(x = abs_latitude, ymin = tmin_breadth, ymax = tmax_breadth), color = "darkgreen", linewidth = 1, alpha = .3)
+  
+
+
+
+
 #### H1: species thermal optima decreases with latitude ####
-topt_lat <- ggplot(data = fitted_datasets %>%
+topt_lat <- ggplot(data = fits_with_temps %>%
          filter(topt_TF == TRUE) %>%
          filter(!(is.na(abs_latitude))),
        aes(x = abs_latitude, y = topt, color = land_or_sea)) +
-  geom_abline(intercept = 40, slope = -1, color = "black", linetype = "dashed") +
+  geom_abline(intercept = 20, slope = 0, color = "black", linetype = "dashed") +
   geom_point(alpha = 0.7) +
   geom_smooth(method = lm) +
   labs(x = "Absolute Latitude", y = "Thermal Optima") +
@@ -75,7 +106,7 @@ ggsave("topt_lat_regression.pdf", plot = topt_lat, path = here("figures"), width
 
 
 topt_lat_realm <- lmer(topt ~ abs_latitude * land_or_sea + (1 | study_ID), 
-                        data = fitted_datasets %>%
+                        data = fits_with_temps %>%
                           filter(topt_TF == TRUE,
                                  !is.na(abs_latitude)))
 
@@ -88,13 +119,13 @@ r2(topt_lat_realm)
 Anova(topt_lat_realm) # affect of abs lat on topt is sig, but realm isnt?
 ## what about response type
 # response types # 
-res <- fitted_datasets %>%
+res <- fits_with_temps %>%
   filter(topt_TF == TRUE) %>%
   group_by(response_type_group) %>%
   summarize(n = n()) %>%
   arrange(desc(n))
 #top groups are swimming, metabolism, and growth
-ggplot(data = fitted_datasets %>%
+ggplot(data = fits_with_temps %>%
          filter(topt_TF == TRUE) %>%
          filter(response_type_group %in% c("swimming", "metabolism", "growth")) %>%
          filter(!(is.na(abs_latitude))),
@@ -104,7 +135,7 @@ ggplot(data = fitted_datasets %>%
   labs(x = "Absolute Latitude", y = "Thermal Optimum", title = "Scatter of Topt and latitude with response type")
 
 resp_topt_lat <- lmer(topt ~ abs_latitude * response_type_group + (1 | study_ID),
-                      data = fitted_datasets %>%
+                      data = fits_with_temps %>%
                         filter(response_type_group %in% c("swimming", "metabolism", "growth")) %>%
                         filter(topt_TF == TRUE,
                                !is.na(abs_latitude)))
@@ -153,7 +184,7 @@ summary(aclim_lm)
 
 topt_mean_tm <- ggplot(data = fits_with_temps %>% 
          filter(topt_TF == TRUE),
-       aes(x = temp_mean, y = topt, color = enviornment)) +
+       aes(x = mean, y = topt, color = enviornment)) +
   geom_point(alpha = 0.7) +
   geom_smooth(method = stats::lm) +
   geom_abline(intercept = 0, slope = 1, color = "black", linetype = "dashed") +
@@ -183,10 +214,13 @@ hist(resid(mean_topt_model))
 r2(mean_topt_model)
 Anova(mean_topt_model) #significant
 
+
+
+
 #### topt and extremes ####
 topt_ext_tm <- ggplot(data = fits_with_temps %>% 
                          filter(topt_TF == TRUE),
-                       aes(x = q_high, y = topt, color = enviornment)) +
+                       aes(x = q97.5, y = topt, color = enviornment)) +
   geom_point(alpha = 0.7) +
   geom_smooth(method = stats::lm) +
   geom_abline(intercept = 0, slope = 1, color = "black", linetype = "dashed") +
@@ -248,17 +282,14 @@ ggsave("tolerance_var.pdf", plot = tolerance, path = here("figures"), width = 5,
 #performance breadth should increase with var
 breadth <- ggplot(data = fits_with_temps %>% 
          filter(breadth_TF == TRUE),
-       aes(x = temp_sd, y = breadth, color = enviornment)) +
-  geom_abline(intercept = 0, slope = 1, color = "black", linetype = "dashed") +
+       aes(x = sd, y = breadth, color = enviornment)) +
+  geom_abline(intercept = 9.5, slope = 0, color = "black", linetype = "dashed") +
   geom_point(alpha = 0.7) +
   geom_smooth(method = stats::lm) +
   scale_color_manual(
     name = "Environment",
     values = c("marine" = "blue", "freshwater" = "lightgreen")
   ) +
-  labs(
-    x = "thermal variability (temp_sd)",
-    y = "thermal performance breadth") +
   theme_classic()
 breadth
 ggsave("breadth_var.pdf", plot = breadth, path = here("figures"), width = 5, height = 4)
@@ -266,7 +297,7 @@ ggsave("breadth_var.pdf", plot = breadth, path = here("figures"), width = 5, hei
 #species in more variable enviornments should have larger performance breadths
 
 mean_and_var_temp <- ggplot(data = fits_with_temps,
-       aes(x = temp_mean, y = temp_sd, color = enviornment)) +
+       aes(x = mean, y = sd, color = enviornment)) +
   geom_point(alpha = 0.7) +
   labs(
     x = "Average Temperature",
@@ -276,6 +307,7 @@ mean_and_var_temp <- ggplot(data = fits_with_temps,
   values = c("marine" = "blue", "freshwater" = "lightgreen")
 ) +
   theme_classic()
+mean_and_var_temp
 ggsave("temp+mean+var.pdf", plot = mean_and_var_temp, path = here("figures"), width = 5, height = 4)
 
 #show where breadths are in temperature space
@@ -290,11 +322,12 @@ qqline(resid(mean_breadth_model))
 hist(resid(mean_breadth_model))
 summary(mean_breadth_model)
 
-var_breadth_model <- lme(breadth ~ temp_sd,
-                          data = freshwater_temps %>%
+var_breadth_model <- lme(breadth ~ sd*enviornment,
+                          data = fits_with_temps %>%
                             filter(breadth_TF == TRUE),
-                          random = ~ 1|study_ID)
+                           random = ~ 1|study_ID)
 
+summary(var_breadth_model)
 plot(residuals(var_breadth_model))
 qqnorm(resid(var_breadth_model))
 qqline(resid(var_breadth_model))
@@ -308,45 +341,47 @@ summary(var_breadth_model)
 
 ## deutsch warming tolerance - the difference between ctmax and mean env. temp
 fits_with_temps <- fits_with_temps %>%
-  mutate(warming_tolerance = ctmax - temp_mean) %>%
-  mutate(thermal_safety_margin_duetsch = topt - temp_mean)
+  mutate(warming_tolerance = ctmax - mean) %>%
+  mutate(thermal_safety_margin_duetsch = topt - mean)
 
 ##does how close your topt is to your env temp depend on latitude???? ### 
 fits_with_temps <- fits_with_temps %>%
-  mutate(diff_max = q_high - topt) %>% 
-  mutate(diff_mean = temp_mean - topt) 
+  mutate(diff_max = q97.5 - topt) %>% 
+  mutate(diff_mean = mean - topt) 
 
 ###topt should be closer to mean water temp in the tropics (ie mag should decrease with abs. latitude), where temps are higher (out of the tropics hyp)
 diff_mean <- ggplot(data = fits_with_temps %>%
          filter(topt_TF == TRUE),
-       aes(x = abs_latitude, y = diff_mean, color = enviornment)) +
-  geom_abline(intercept = 10, slope = -1, color = "black", linetype = "dashed") +
+       aes(x = sd, y = topt-mean)) +
+  geom_abline(intercept = 0, slope = 0, color = "black", linetype = "dashed") +
   geom_point(alpha = 0.7) +
   geom_smooth(method = stats::lm) +
-  labs(
-    x = "abs latitude",
-    y = "mean temp - topt") +
-  scale_color_manual(
-    name = "Environment",
-    values = c("marine" = "blue", "freshwater" = "lightgreen")
-  ) +
+  # scale_color_manual(
+  #   name = "Environment",
+  #   values = c("marine" = "blue", "freshwater" = "lightgreen")
+  # ) +
   theme_classic()
-ggsave("diff_mean.pdf", plot = diff_mean, path = here("figures"), width = 5, height = 4)
+
+diff_mean
+
+model <- lme((topt-mean) ~ sd*enviornment,
+                        data = fits_with_temps %>%
+                          filter(topt_TF == TRUE),
+                        random = ~ 1|study_ID)
+summary(model)
 
 diff_extreme <- ggplot(data = fits_with_temps %>%
          filter(topt_TF == TRUE),
-       aes(x = abs_latitude, y = diff_max, color = enviornment)) +
-  geom_abline(intercept = 10, slope = -1, color = "black", linetype = "dashed") +
+       aes(x = abs_latitude, y = topt-q97.5, color = enviornment)) +
+  geom_abline(intercept = 0, slope = 0, color = "black", linetype = "dashed") +
   geom_point(alpha = 0.7) +
   geom_smooth(method = stats::lm) +
-  labs(
-    x = "abs latitude",
-    y = "extreme temp - topt") +
   scale_color_manual(
     name = "Environment",
     values = c("marine" = "blue", "freshwater" = "lightgreen")
   ) +
   theme_classic()
+diff_extreme
 ggsave("diff_extreme.pdf", plot = diff_extreme, path = here("figures"), width = 5, height = 4)
 
 
