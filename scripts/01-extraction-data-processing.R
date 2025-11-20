@@ -9,7 +9,7 @@ library(here)
 library(stringr)
 
 #### 2. load most up to date extraction datasheet ####
-filename <- "data_extraction_12_11_2025.csv"
+filename <- "data_extraction_19_11_2025.csv"
 raw_data <- read.csv(here("raw-data", filename))
 
 #### 3. initial data cleaning ####
@@ -284,6 +284,34 @@ curves <- curves %>%
   dplyr::select(n_unique_temps, curve_ID, test_temp, everything()) %>%
   filter(n_unique_temps > 3)
 length(unique(curves$curve_ID))
+
+curves <- curves %>%
+  mutate(life_stage_tested = ifelse(life_stage_tested == "juvenile ", "juvenile", life_stage_tested)) %>%
+  mutate(life_stage_tested = ifelse(life_stage_tested %in% c("immature", "fingerling", "yearling"), "juvenile", life_stage_tested)) %>%
+  mutate(life_stage_tested = ifelse(life_stage_tested == "mature", "adult", life_stage_tested)) %>%
+  mutate(life_stage_tested = ifelse(life_stage_tested %in% c("embyro", "egg"), "embryo", life_stage_tested)) %>%
+  mutate(life_stage_tested = ifelse(life_stage_tested == "larval", "larvae", life_stage_tested))
+
+curves <- curves %>%
+  mutate(life_stage_manip = ifelse(life_stage_manip %in% c("immature", "fingerling", "yearling"), "juvenile", life_stage_tested)) %>%
+  mutate(life_stage_manip = ifelse(life_stage_manip == "mature", "adult", life_stage_tested)) %>%
+  mutate(life_stage_manip = ifelse(life_stage_manip == "egg", "embryo", life_stage_tested)) %>%
+  mutate(life_stage_manip = ifelse(life_stage_manip == "larval", "larvae", life_stage_tested))
+
+curves <- curves %>%
+  mutate(treatment_1_type = ifelse(treatment_1_type %in% c("PCO2", "co2"), "CO₂/pH", treatment_1_type)) %>%
+  mutate(treatment_1_type = ifelse(treatment_1_type %in% c("acclimation", "acclimation-temp", "acclimation_to_seasonal_conditions", "incubation_temp"), "Acclimation", treatment_1_type)) %>%
+  mutate(treatment_1_type = ifelse(treatment_1_type %in% c("ration", "prey-density", "ration offered ", "ration offered", "food ration", "food-type", "food", "week-of-refeeding-after-3-weeks-starvation", "satiation"), "Ration", treatment_1_type)) %>%
+  mutate(treatment_1_type = ifelse(treatment_1_type %in% c("size", "age", "initial-mean-weight"), "Size", treatment_1_type)) %>%
+  mutate(treatment_1_type = ifelse(treatment_1_type %in% c("salinity", "conductivity"), "Salinity", treatment_1_type)) %>%
+  mutate(treatment_1_type = ifelse(treatment_1_type == "oxygen-level", "Oxygen", treatment_1_type)) %>%
+  mutate(treatment_1_type = ifelse(treatment_1_type %in% c("lumination", "time-of-day"), "Photoperiod", treatment_1_type)) %>%
+  mutate(treatment_1_type = ifelse(treatment_1_type == "oxygen-level", "Oxygen", treatment_1_type))
+
+curves <- curves %>%
+  mutate(treatment_2_type = ifelse(treatment_2_type == "mass", "Size", treatment_2_type)) %>%
+  mutate(treatment_2_type = ifelse(treatment_2_type == "satiation", "Ration", treatment_2_type))
+
 ##421 total datasets, 1 is a max and min one###
 
 

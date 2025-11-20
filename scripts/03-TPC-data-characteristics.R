@@ -26,6 +26,46 @@ curves_unique <- curves %>%
   mutate(datasets_per_study = n()) %>%
   ungroup
 
+curves_unique <- curves %>%
+  group_by(curve_ID) %>%
+  slice(1) %>%
+  dplyr::select(curve_ID, curve_type, species_ID, latitude, longitude, response_type, treatment_1_group, study_ID, habitat, habitat_water) %>%
+  ungroup
+curves_unique1 <- curves_unique1 %>%
+  group_by(study_ID) %>%
+  mutate(datasets_per_study = n()) %>%
+  ungroup
+curvesperstudy <- curves_unique1 %>%
+  group_by(study_ID) %>%
+  slice(1)
+mean_datasets_per_study <- mean(curvesperstudy$datasets_per_study, na.rm = TRUE) #4.43
+median_datasets_per_study <- median(curvesperstudy$datasets_per_study, na.rm = TRUE) #3
+max <- max(curvesperstudy$datasets_per_study, na.rm = TRUE) #20
+
+## what about habitat dis ##
+habitats <- curves_unique %>%
+  group_by(latitude, longitude) %>%
+  slice(1) %>%
+  ungroup
+
+#get count of unique 
+curves_unique %>% 
+  count(habitat)
+curves_unique %>% 
+  count(habitat_water)
+
+#### with regard to treatments and life stages ####
+
+
+life_stages <- curves_unique %>% 
+  count(life_stage_tested)
+treatments <- curves_unique %>%
+  count(treatment_1_type)
+curve_type <- curves_unique %>%
+  count(curve_type)
+curve_type <- curves_unique %>%
+  count(response_curve_type)
+  
 install.packages("maps")
 library(maps)
 world_map <- map_data("world")
@@ -46,7 +86,7 @@ map <- ggplot() +
     axis.title.x = element_blank(), 
     axis.title.y = element_blank(),  
     axis.line = element_blank(),  
-    text = element_text(family = "Times New Roman", size = 12),
+    text = element_text(size = 10),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_blank(),  
@@ -61,9 +101,10 @@ curves_unique <- curves_unique %>%
 #### response groups
 library(forcats)
 response <- ggplot(curves_unique, aes(x = fct_infreq(response_type_group))) +
-  geom_bar(fill = "black", color = "lightgrey", alpha = 0.9) +
+  geom_bar(fill = "darkslategrey", color = "lightgrey", alpha = 0.9) +
   xlab("Response") +
-  ylab("Count") +
+  ylab("Datasets") +
+  coord_flip() +
   theme_minimal() +
   scale_x_discrete(
     labels = c(
@@ -77,54 +118,33 @@ response <- ggplot(curves_unique, aes(x = fct_infreq(response_type_group))) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
     panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank()
-  )
+    panel.grid.minor = element_blank(),
+    text = element_text(size = 10)) +
+  scale_y_continuous(expand = c(0, 0))
+  
 
 response
 
 
-### histogram of # of test temperatures 
-a <- ggplot(curves_unique, aes(x = n_unique_temps)) +
-  geom_histogram(binwidth=1, fill="black", color="lightgrey", alpha=0.9) +
-  theme_minimal() + 
-  labs(x = "Number of Temperatures", y = "Number of datasets") + 
-  theme(
-    text = element_text(size = 9),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank())
-a
-ggsave("histogram_test_temps.pdf", plot = a, path = here("figures"), width = 5, height = 4)
-
-#median # of test temps?
-median(curves_unique$n_unique_temps) #4
-mean(curves_unique$n_unique_temps) #5.11
-# % above 4, % above 5
-# percentage above 4
-mean(curves_unique$n_unique_temps > 4) * 100 #47.51
-mean(curves_unique$n_unique_temps == 4) *100 #52.49 %
-# percentage above 5
-mean(curves_unique$n_unique_temps > 5) * 100 #24.94
-
-
 ## species
 curves_unique_with_taxa <- curves_unique %>%
-  select(curve_ID, study_ID, species_ID, response_type, habitat) %>%
+  dplyr::select(curve_ID, study_ID, species_ID, response_type, habitat) %>%
   left_join(taxa, join_by(species_ID)) %>%
   group_by(family) %>%
   mutate(datasets_per_family = n()) %>%
-  select(datasets_per_family, family) %>%
+  dplyr::select(datasets_per_family, family) %>%
   distinct()
-
+unique(curves_unique_with_taxa$family)
 family <- ggplot(data = curves_unique_with_taxa, aes(x = reorder(family, datasets_per_family), y = datasets_per_family)) +
-  geom_bar(stat = "identity", fill = "darkblue", color = "lightgrey", alpha = 0.9, width = .9) +
+  geom_bar(stat = "identity", fill = "darkslategrey", color = "lightgrey", alpha = 0.9, width = .9) +
   coord_flip() +
   xlab("Family") + 
-  ylab("Extracted Datasets") +  
-  theme_bw() +
+  ylab("Datasets") +  
+  theme_minimal() +
   theme(
     panel.grid.major = element_blank(),   
     panel.grid.minor = element_blank(),   
-    text = element_text(size = 11)) +
+    text = element_text(size = 10)) +
   scale_y_continuous(expand = c(0, 0))
 family
 ggsave("histogram_families.pdf", plot = family, path = here("figures"), width = 5, height = 6)
@@ -148,6 +168,29 @@ ggsave(
 
 
 
+
+
+### histogram of # of test temperatures 
+a <- ggplot(curves_unique, aes(x = n_unique_temps)) +
+  geom_histogram(binwidth=1, fill="black", color="lightgrey", alpha=0.9) +
+  theme_minimal() + 
+  labs(x = "Number of Temperatures", y = "Number of datasets") + 
+  theme(
+    text = element_text(size = 9),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank())
+a
+ggsave("histogram_test_temps.pdf", plot = a, path = here("figures"), width = 5, height = 4)
+
+#median # of test temps?
+median(curves_unique$n_unique_temps) #4
+mean(curves_unique$n_unique_temps) #5.11
+# % above 4, % above 5
+# percentage above 4
+mean(curves_unique$n_unique_temps > 4) * 100 #47.51
+mean(curves_unique$n_unique_temps == 4) *100 #52.49 %
+# percentage above 5
+mean(curves_unique$n_unique_temps > 5) * 100 #24.94
 
 ## some sort of way to visualize the temperature ranges tested ##
 

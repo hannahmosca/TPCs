@@ -24,3 +24,5 @@ sst_temperatures_my_points.RDS
 =======
 .DS_Store
 >>>>>>> 98b2fa1ecad56c981562f599c765d92d9925b77e
+freshwater_temperatures_my_points.RDS
+freshwater_summarized_masked.nc
