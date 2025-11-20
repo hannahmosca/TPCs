@@ -119,6 +119,12 @@ top_params <- valid_params %>%
 best_param <- top_params %>%
   inner_join(top_model %>% select(curve_ID, model), by = c("curve_ID", "model"))
 
+## top model preds with their params
+top_preds <- top_model_preds %>%
+  left_join(best_param, join_by(curve_ID, model))
+
+#### save the top preds/moels ####
+saveRDS(top_preds, here("processed-data", "top_model_predictions.RDS"))
 ##breadth##
 breadth_curves <- curves %>%
   filter(dataset_type == "topt") %>%
