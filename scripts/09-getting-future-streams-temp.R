@@ -126,6 +126,7 @@ writeCDF(r_monthly, filename = here("processed-data", "freshwater_monthly.nc"))
   ## computing summary stats across layers
   mean_raster <- app(freshwater_monthly, mean, na.rm = TRUE)
   sd_raster <- app(freshwater_monthly, sd, na.rm = TRUE)
+  median_raster <- app(freshwater_monthly, median, na.rm = TRUE)
   min_raster <- app(freshwater_monthly, min, na.rm = TRUE)
   max_raster <- app(freshwater_monthly, max, na.rm = TRUE)
   quant_raster <- app(
@@ -192,8 +193,7 @@ d <-  ggplot(df) +
 
 #### 06: extracting mypoint data ####
   ## load required datasets
-  datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
-  curves <- readRDS(here('processed-data', 'wild-tpcs.Rds'))
+  datasets <- readRDS(here('processed-data', 'wild-tpcsupdated.Rds'))
 
   #get freshwater fish
   freshwater <- datasets %>% 
@@ -227,4 +227,4 @@ d <-  ggplot(df) +
   all$longitude = unique_lat_long$longitude
   
   ## save my point data
-  saveRDS(all, file = here("processed-data", "freshwater_temperatures_my_points.RDS"))
+  saveRDS(all, file = here("processed-data", "freshwater_temperatures_my_points_17_12_2025.RDS"))

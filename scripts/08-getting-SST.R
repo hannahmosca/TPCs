@@ -7,7 +7,7 @@ library(here)
 library(dplyr)
 library(tidyverse)
 library(viridis)
-
+library(tidyterra)
 #### 01: subset raster to get 1982-2025
   ## load data
   filename <- "sst.mon.mean.nc" # sst data, 529 monthly means from 
@@ -60,7 +60,7 @@ library(viridis)
   
   ## extract all temporal values for mypoints
   #load point data
-  datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
+  datasets <- readRDS(here('processed-data', 'wild-tpcsupdated.RDS'))
   ##get marine fish
   marine <- datasets %>% 
     filter(land_or_sea == "oceanic") %>%
@@ -74,7 +74,6 @@ library(viridis)
   
   #check where points fall, 
   new_my_points <- vect(unique_lat_long, geom = c("longitude", "latitude"), crs = crs(sst_monthly))
-  library(tidyterra)
   ggplot() +
     geom_spatraster(data = sst_monthly[[1]]) +
     geom_spatvector(data = new_my_points, color = "red")
@@ -101,7 +100,7 @@ library(viridis)
   point_vals <- point_vals %>%
     dplyr::select(latitude, longitude, everything())
   
-  saveRDS(point_vals, file = here("processed-data", "marine_sst_all_temporal_mypoints.RDS"))
+  saveRDS(point_vals, file = here("processed-data", "marine_sst_all_temporal_mypoints17_12_2025.RDS"))
   
   ## computing summary stats across layers
   mean_raster <- app(sst_monthly, mean, na.rm = TRUE)
@@ -136,36 +135,7 @@ library(viridis)
   ## save as a cdf
   writeCDF(sst_summary, filename = here("processed-data", "sst_monthly_summarized.nc"))
  
-#### 03: extracting mypoint data ####
   
-  ## load required datasets
-  sst <- rast((here("processed-data", "sst_monthly_summarized.nc"))) #average across months from 1982-2025
-  datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
-  curves <- readRDS(here('processed-data', 'wild-tpcs.Rds'))
-
-  ## rename
-  names(sst)
-  names_sst_temp <- c("mean", "sd", "min", "max", "q2.5", "q97.5")
-  names(sst) <- names_sst_temp
-  
-  ##get freshwater fish
-  marine <- datasets %>% 
-    filter(land_or_sea == "oceanic") %>%
-    filter(!(is.na(latitude))) %>%
-    filter(!(is.na(longitude))) 
-  
-  #get lat/long
-  unique_lat_long <- marine %>%
-    select(latitude, longitude, study_ID) %>%
-    distinct()
-  
-  #check where points fall, 
-  new_my_points <- vect(unique_lat_long, geom = c("longitude", "latitude"), crs = crs(sst))
-  library(tidyterra)
-  ggplot() +
-    geom_spatraster(data = sst[[1]]) +
-    geom_spatvector(data = new_my_points, color = "red")
-
 #### 04: make map of overlaid point data ####
   df <- as.data.frame(sst, xy = TRUE, na.rm = TRUE)
   

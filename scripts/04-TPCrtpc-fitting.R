@@ -14,7 +14,7 @@ library(tidyverse)
 library(dplyr)
 library(here)
 #load the data
-d <- readRDS(here("processed-data","wild-tpcs.RdS")) # this was made in script 01
+d <- readRDS(here("processed-data","wild-tpcsupdated.RdS")) # this was made in script 01
 
 # classifying datasets by how much data is in them//how many test temps
 # TP datasets with 5+ temperatures, calling them 'high res'
@@ -89,7 +89,7 @@ for (i in seq_along(curve_ids)) {
       mutate(curve_ID = curve_ids[i])
     preds_list[[i]] <- preds
     
-    # parameter points (topt, ctmax)
+    # parameter points (topt, ctmax, ctmin)
     param_points <- model_params %>%
       select(topt, ctmax, ctmin) %>%
       pivot_longer(cols = everything(), names_to = "label", values_to = "test_temp") %>%
