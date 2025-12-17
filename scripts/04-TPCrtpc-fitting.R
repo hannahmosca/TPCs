@@ -14,7 +14,7 @@ library(tidyverse)
 library(dplyr)
 library(here)
 #load the data
-d <- readRDS(here("processed-data","wild-tpcs.RdS")) # this was made in script 01
+d <- readRDS(here("processed-data","wild-tpcsupdated.RdS")) # this was made in script 01
 
 # classifying datasets by how much data is in them//how many test temps
 # TP datasets with 5+ temperatures, calling them 'high res'
@@ -22,14 +22,15 @@ high_res_ds <- d %>%
   group_by(curve_ID) %>%
   filter(n_unique_temps >= 5) %>%
   ungroup()
-length(unique(high_res_ds$curve_ID)) #200
+length(unique(high_res_ds$curve_ID)) #237
 
 ## TP datasets with 4 temperatures, calling them 'low res'
 low_res_ds <- d %>%
   anti_join(high_res_ds, by = "curve_ID") 
-length(unique(low_res_ds$curve_ID)) #222
+length(unique(low_res_ds$curve_ID)) #220
 
 #### 2. Fitting high res curves with all 4 parameter models in rtpc
+curve_IDs <- unique(high_res_ds$curve_ID)
 #### bierre2_1999 ####
 curve_ids <- curve_IDs
 # empty containers for fitting loop
@@ -315,7 +316,7 @@ for (i in seq_along(curve_ids)) {
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
 }
-print(length(failed_fits))  #0
+print(length(failed_fits))  #74
 # combine results
 all_fits_johnsonlewin_1946_highres <- bind_rows(fits_tidy_list, .id = "list_id")
 all_resids_johnsonlewin_1946_highres <- bind_rows(resids_list, .id = "list_id")
@@ -509,7 +510,7 @@ for (i in seq_along(curve_ids)) {
   }
   cat("Finished curve_ID:", curve_ids[i], "\n")
 }
-print(length(failed_fits))  #0
+print(length(failed_fits))  #5
 # combine results
 all_fits_oneill_highres <- bind_rows(fits_tidy_list, .id = "list_id")
 all_resids_oneill_1972_highres <- bind_rows(resids_list, .id = "list_id")
@@ -703,7 +704,7 @@ for (i in seq_along(curve_ids)) {
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
 }
-print(length(failed_fits))  #0
+print(length(failed_fits))  #13
 # combine results
 all_fits_rezende_2019_highres <- bind_rows(fits_tidy_list, .id = "list_id")
 all_resids_rezende_2019_highres <- bind_rows(resids_list, .id = "list_id")
@@ -992,7 +993,7 @@ for (i in seq_along(curve_ids)) {
   
   cat("Finished curve_ID:", curve_ids[i], "\n")
 }
-print(length(failed_fits))  #0
+print(length(failed_fits))  #2
 # combine results
 all_fits_weibull_1995_highres <- bind_rows(fits_tidy_list, .id = "list_id")
 all_resids_weibull_1995_highres <- bind_rows(resids_list, .id = "list_id")
@@ -1004,6 +1005,7 @@ all_param_points_weibull_1995_highres <- bind_rows(param_points_list, .id = "lis
 #### 3 parameter models for datasets with 4 points ####
 #any with 4+ points will be attempted with as many models on rtpc that fit 4 points 
 # only 3 models have 3 parameters -- gaussian_1989, and quadratic_2008
+curve_IDs <- unique(low_res_ds$curve_ID)
 curve_ids <- curve_IDs
 #### gaussian_1984 ####
 fits_list <- vector("list", length(curve_ids))
@@ -1266,12 +1268,12 @@ fits_list_all <- list(
   "quadratic" = all_fits_quadratic_2008_all
 )
 resids_list_all <- list(
-  "spain" = all_resids_spain_1982_resids,
+  "spain" = all_resids_spain_1982_highres,
   "weibull" = all_resids_weibull_1995_highres,
   "thomas" = all_resids_thomas_2012_highres,
   "rezende" = all_resids_rezende_2019_highres,
-  "ratkowsky" = all_resids_ratkowsky_highres,
-  "oneill" = all_resids_oneill_highres,
+  "ratkowsky" = all_resids_ratkowsky_1983_highres,
+  "oneill" = all_resids_oneill_1972_highres,
   "lactin2" = all_resids_lactin2_1995_highres,
   "johnsonlewin" = all_resids_johnsonlewin_1946_highres,
   "hinshelwood" = all_resids_hinshelwood_1947_highres,
@@ -1297,9 +1299,9 @@ all_paramaters <- left_join(all_params, all_param_points, join_by(curve_ID, mode
   select(-(c(test_temp_topt, test_temp_ctmax, test_temp_ctmin, list_id.y, list_id.x))) %>%
   select(curve_ID, model, everything())
 
-saveRDS(all_fits, file = here('processed-data', "model_fit_evaluations_01_10_25.RDS"))
-saveRDS(all_preds, file = here('processed-data', "all_model_predictions_01_10_25.RDS"))
-saveRDS(all_paramaters, file = here('processed-data', "all_model_params_01_10_25.RDS"))
+saveRDS(all_fits, file = here('processed-data', "model_fit_evaluations_17_10_25.RDS"))
+saveRDS(all_preds, file = here('processed-data', "all_model_predictions_17_10_25.RDS"))
+saveRDS(all_paramaters, file = here('processed-data', "all_model_params_17_10_25.RDS"))
 
 
 
