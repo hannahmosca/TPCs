@@ -211,7 +211,7 @@ dataset_types <- distinct_curves %>%
 #     names_to = "parameter",
 #     values_to = "is_true"
 #   )
-# summary_counts <- long_data %>%
+summary_counts <- long_data %>%
 #   group_by(habitat_water, parameter) %>%
 #   summarise(n_true = sum(is_true, na.rm = TRUE), .groups = "drop")
 
