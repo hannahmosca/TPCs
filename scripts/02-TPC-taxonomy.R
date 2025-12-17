@@ -16,12 +16,12 @@ remotes::install_github("ropensci/taxize")
 library(taxize)
 
 #### 2. load most up-to-date extracted species_ID sheet ####
-filename <- "data_extraction_species_ID_07_10_2025.csv"
+filename <- "data_extraction_species_ID_16_12_2025.csv"
 # load species data and remove empty entries
 species <- read.csv(here("raw-data", filename)) %>%
   filter(species != "")
 ##filter species to only those we have temp datasets on
-curves <- readRDS(here("processed-data", "wild-tpcs.RdS"))
+curves <- readRDS(here("processed-data", "wild-tpcsupdated.RdS"))
 species_IDs <- unique(curves$species_ID)
 species_filtered <- species %>%
   filter(species_ID %in% species_IDs)
@@ -34,8 +34,11 @@ species_filtered <- species_filtered %>%
   mutate(species_name = case_when(
     species_name == "Austrolebias wolterstorff" ~ "Megalebias wolterstorffi",
     species_name == "gambusia holbrooki" ~ "Gambusia affinis",
-    species_name == "Salvelinus alpinus" ~ "Salvelinus alpinus",  # redundant but fine
     species_name == "Channa striatus" ~ "Channa striata",
+    species_name == "Salvelinus  alpinus" ~ "Salvelinus alpinus",
+    species_name == "Onychostoma barbatula" ~ "Onychostoma barbatulum",
+    species_name == "Zoarces vivparus" ~ "Zoarces viviparus",
+    species_name == "Zoramia leptacantha" ~ "Zoramia leptacanthus",
     species_name == "Centropristis  striata" ~ "Centropristis striata",
     species_name == "Chromis  atripectoralis" ~ "Chromis atripectoralis",
     TRUE ~ species_name   
@@ -60,64 +63,5 @@ taxonmy <- map_dfr(.x = df1, ~ data.frame(.x), .id = 'species_name') %>%
 taxonmy <- taxonmy %>%
   left_join(species_filtered %>% select(species_ID, species_name), join_by(species_name))
 
-write.csv(taxonmy, here('processed-data', 'taxonomy.csv')) ## updated in raw the ones that i coudlnt get from itls
-
-taxonomy_updated <- read.csv(here('processed-data', 'taxonomy-updated.csv'))
-
-install.packages("worms")
-library(worrms)
-
-codes <- taxonomy_updated %>%
-  rename(gen_spp = species_name)
-
-source(here("scripts", "yulia_worms_function.R"))
-
-
-# Step 3. loop through species list -----------------------------------------------
-# create empty list to store outputs
-out <- vector(mode = "list",
-              length = nrow(codes))
-
-# loop through species list to run the function
-for(i in 1:length(out)){
-  
-  # save function output in list element
-  out[[i]] <- get_wm_records(codes$gen_spp[i])
-  # clock
-  print(i)
-  
-}
-# note that most outputs will probably have 1 row (this is ideal)
-# but some might have zero if it doens't find your species, and 
-# some might have multiple if there are mulitple matches
-
-# view to see how many rows each has. If they are all 1 row, that's good. 
-lapply(out, nrow) %>% unlist() %>% table()
-# if there are some with different than one row, investigate those
-which(lapply(out, nrow) %>% unlist() != 1)
-
-# Step 4. bind outputs to original data frame -----------------------------
-# Create new columns to save outputs
-codes$after_wrms_name <- NA
-codes$after_wrms_id <- NA
-
-# loop again to add the name that worms finds and the AphiaID 
-# to the original dataframe. 
-for(i in 1:nrow(codes)){
-  if(!is.null(out[[i]])){
-    codes$after_wrms_name[i] <- out[[i]]$valid_name
-    codes$after_wrms_id[i] <- out[[i]]$valid_AphiaID
-  }
-  print(i)
-}
-codes <- codes %>%
-  relocate(after_wrms_name, .before = gen_spp) %>%
-  relocate(after_wrms_id, .after = after_wrms_name)
-
-write.csv(codes, here("processed-data", "alpha_not_updated.csv"))
-taxo_alpha_updated <- read.csv(here("processed-data", "alpha_updated.csv")) %>%
-  select(gen_spp, kingdom, subkingdom, infrakingdom, phylum, subphylum, infraphylum, superclass, class, superorder, order, suborder, family, subfamily, genus, species, AlphiaID, species_ID)
-
-taxonomy <- taxo_alpha_updated %>%
-  left_join(species_filtered %>% select(species_ID, subspecies, common_name, species_notes), join_by(species_ID))
-saveRDS(taxonomy, here("processed-data", "taxonomy_up_to_date.RDS"))
+write.csv(taxonmy, here('processed-data', 'taxonomy.csv')) 
+##added 3 missing species information, and saved and called it taxonomy_16_12_2025.csv

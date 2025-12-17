@@ -137,7 +137,7 @@ marine_sst_all_clean <- marine_sst_all_temps %>%
 # Combine them
 combined_temp_points <- bind_rows(freshwater_temp_points_clean, marine_sst_all_clean)
 
-  
+
 
 ggplot(combined_temp_points, aes(x = environment, y = q_high - temp_mean, fill = environment)) +
   geom_boxplot(alpha = 0.6, outlier.alpha = 0.4) +
