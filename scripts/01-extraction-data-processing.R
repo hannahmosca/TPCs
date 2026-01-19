@@ -196,11 +196,15 @@ curves <- curves %>%
   filter(n_unique_temps > 3)
 length(unique(curves$curve_ID)) #457 
 
-#make a response_value category so that you can run stats on all at the same time#
+#make a response_value category 
+#make sure all are numeric
 curves <- curves %>%
   mutate(response_ind = as.numeric(response_ind)) %>%
   mutate(response_median = as.numeric(response_median)) %>%
-  mutate(response_mean = as.numeric(response_mean)) %>%
+  mutate(response_mean = as.numeric(response_mean))
+
+#make response_value column
+curves <- curves %>%
   mutate(response_value = case_when(
     response_curve_type == "mean" ~ response_mean,
     response_curve_type == "individual" ~ response_ind,
@@ -208,22 +212,24 @@ curves <- curves %>%
   )) %>%
   select(curve_ID, study_ID, species_ID, curve_type, response_type, test_temp, response_value, response_curve_type, everything())
 
-
 ## un-log transform responses that are logged
 ##need to check these curves to make sure i dont need to refit.
 curves <- curves %>%
   mutate(response_value = ifelse(response_type %in% c("log-SMR", "log-active-metabolic-rate", "log-metabolic-scope"),
-                                 10^response_mean, response_mean))
+                                 10^response_mean, response_value))
 #transform the natural logged one
 curves <- curves %>%
   mutate(response_value = ifelse(response_type == "ln-whole-oxygen-embryo-consumption",
-                                 exp(response_mean), response_mean))
+                                 exp(response_mean), response_value))
 
 curves <- curves %>%
   mutate(response_value = ifelse(response_type == "development-rate",
-                                 1/response_ind, response_ind)) %>%
+                                 1/response_ind, response_value)) %>%
   mutate(response_unit = ifelse(response_type == "development-rate", "1/days", response_unit))
-  
+
+curves <- curves %>%
+  select(curve_ID, response_type, response_value, response_mean, response_ind, response_unit, everything())
+
 
 response_new_names <- read.csv(here("raw-data", "raw_response_categories.csv"))
 response_ontology <- read.csv(here("raw-data", "response_ontology.csv")) %>%
