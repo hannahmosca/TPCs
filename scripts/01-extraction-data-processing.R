@@ -317,5 +317,6 @@ curves_new <- curves_new %>%
 
 length(unique(curves$curve_ID)) #457 unique curve_IDs
 
-saveRDS(curves, file = here("processed-data", "wild-tpcsupdated.RdS"))
+saveRDS(curves_new, file = here("processed-data", "wild-tpcsupdated.RdS"))
+
 
