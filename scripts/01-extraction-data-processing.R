@@ -18,7 +18,7 @@ library(stringr)
 library(dplyr)
 
 #### 2. load most up to date extraction datasheet ####
-filename <- "data_extraction_12_16_2025.csv"
+filename <- "data_extraction_1_19_2026.csv"
 raw_data <- read.csv(here("raw-data", filename))
 
 #### 3. initial data cleaning ####
@@ -48,13 +48,24 @@ data <- data %>%
       curve_type %in% c("batch-aclim", "batch-acclimated") ~ "batch-acclim",
       TRUE ~ curve_type))
 
-## tidy response_type synonyms ##
+## un-log transform responses that are logged
+##need to check these curves to make sure i dont need to refit.
+data <- data %>%
+  mutate(response_mean = as.numeric(response_mean)) %>%
+  mutate(response_mean = ifelse(response_type %in% c("log-SMR", "log-active-metabolic-rate", "log-metabolic-scope"),
+      10^response_mean, response_mean))
+#transform the natural logged one
+data <- data %>%
+  mutate(response_mean = as.numeric(response_mean)) %>%
+  mutate(response_mean = ifelse(response_type == "ln-whole-oxygen-embryo-consumption",
+         exp(response_mean), response_mean))
+         
+## tidy raw response_type synonyms ##
 data <- data %>%
   mutate(
     response_type = case_when(
-      str_detect(response_type, "weight-sgr|SGR-weight|weight-growth-rate") ~ "standard-growth-rate-weight",
+      str_detect(response_type, "weight-sgr|SGR-weight") ~ "specific-growth-rate-mass",
       response_type == "max-metabolism" ~ "maximum-metabolic-rate",
-      response_type == "CTmin" ~ "ctmin",
       response_type %in% c("maxium-heart-rate", "maxium heart-rate", "maximum heart-rate") ~ "maximum-heart-rate",
       response_type == "whole-oxygen-embryo-consumption" ~ "whole-embyro-oxygen-consumption",
       response_type == "hatching-rate" ~ "hatch-rate",
@@ -65,60 +76,9 @@ data <- data %>%
 ## remove non-performance traits
 data <- data %>%
   filter(!response_type %in% c(
-    "total-length", "standard-length", "CTmax",
+    "total-length", "standard-length", "CTmax", "CTmin",
     "distance-moved", "critical-oxygen-concentration",
     "total-time-following-females", "total-food-consumed"
-  ))
-
-data <- data %>%
-  mutate(response_type_group = case_when(
-    # somatic growth 
-    #be sure to make a note that growth rate includes a couple of developmental growth rates
-    response_type %in% c("yolk-utilization-rate", "larval-growth-rate","length-sgr","SGR","otolith-sgr","growth-efficiency", "relative-daily-growth","standardised-growth-rate","tank-specific-growth-rate","growth efficiency","specific-growth-rate", "growth-rate", "relative-growth-rate", "daily-increment-in-total-length","SGR-standard-length", "embyronic-growth-rate", "rate-of-normal-developing-larvae", "linear-growth-rate","gross-growth-efficiency", "growth-change-in-mass", "growth-change-in-length", "standardized growth", "instantaneous-rate-of-biomass-gain", "daily-weight-gain", "standardized growth", "growth-rate-body-weight", "specific-growth-rate-weight","instantaneous-growth-rate-weight","instantaneous-growth-rate-length", "instantaneous-growth-rate", "standard-growth-rate-weight","weight-gain","individual-specific-growth-rate", "growth-rate-length") ~ "somatic growth",
-    
-    #metabolic
-    response_type %in% c("routine-respiration-rate", "rate-of-oxygen-consumption", "routine-resting-oxygen-consumption", "standard-respiration-rate", "resting-metabolic-rate", "routine-metabolic-rate-ramping", "specific-daily-metabolic-demand", "maximum-oixygen-uptake", "minimum-oxygen-uptake","excess-post-excercise-oxygen-consumption-response","repeat-excess-post-excercise-oxygen-consumption-response","oxygen-uptake","scope-for-growth","routine-metabolism","RMR","MMR_18h","MMR_1h","recMMR50", "metabolic-scope","oxygen-consumption-rate", "standard-metabolic-rate", "maximum-metabolic-rate","metabolic-rate","absolute-aerobic-scope", "aerobic scope", "whole-embyro-oxygen-consumption", "log-SMR", "mitochondrial-respiration", "log-active-metabolic-rate", "aerobic-scope", "routine-metabolic-rate", "%-maximum-metabolic-scope-of-activity", "aerobic_scope", "mass-adjusted-resting-metabolic-rate", "resting-oxygen-consumption", "maximum-oxygen-consumption", "active-metabolic-rate", "mass-adjusted-maximum-metabolic-rate", "mass-adjusted-absolute-aerobic-scope","oxygen-consumption", "maximum-oxygen-uptake") ~ "metabolic",
-   
-     #cardiac
-    response_type %in% c("resting ventilation rate","maximum ventilation rate", "cardiac-output", "heart-rate", "maximum-heart-rate", "initial heart rate") ~ "cardiac", 
-    
-    # swimming
-    response_type %in% c("maximum-angular-velocity","activity","Ucrit","burst-swim-speed","u-gait","recovery-ratio","relative-critical-swimming-speed", "critical-swimming-speed", "swimming-speed", "swimming-speed-critical-velocity", "U-crit", "critical swimming speed", "optimal swimming speed", "maximum-swimming-speed", "burst-swimming-speed", "relative-maximum-swimming-speed", "routine-swimming-performance", "maximum-burst-speed", "maximum-length-specific-velocity", "swim-up-rate", "maximum-swimming-velocity", "maximum-length-specific-acceleration", "maximum-undulatory-swimming-speed", "caudal-fin-beat-frequency-at-maximal-undulatory-swimming-speed", "maximum-labriform-swimming-speed", "pectoral-fin-beat-frequency-at-maximal-labriform-swimming-speed", "constant-acceleration-swimming-performance", "repeat-constant-acceleration-swimming-performance", "swimming-speed-critical-velocity", "tail-beat-frequency", "maximum-critical-swimming-speed", "max-acceleration", "max-velocity", "max-angular-velocity", "max-angular-acceleration", "u-crit", "spontaneous-swimming-speed") ~ "swimming",
-    
-    # reproduction
-    response_type %in% c("maximum-approach-to-female-speed", "gonadosomatic-index", "hatch-rate", "development-rate", "proportion-hatched", "number-mating-attempts-in-10-min","number-copulations-in-10-min","%-mating-efficiency","copulations/min-following-females") ~ "reproduction",
-    
-    # feeding
-    response_type %in% c("consumption-rate", "standardised-energy-intake", "maximum-consumption-rate", "daily-specific-feeding-rate", "food-conversion-efficiency","ingestion-rate", "conversion-efficiency","absorption-efficiency", "absorption-rate", "daily-food-consumption", "net-conversion-efficiency", "feeding-rate", "gross-conversion-efficiency", "mean-daily-food-intake", "relative-daily-food-intake", "food-consumption-rate", "feeding-efficiency", "handling-time", "prey-capture-rate", "capture-manuever-time", "prey-capture-probability", "prey-consumption") ~ "feeding",
-    
-    # survival
-    response_type %in% c("survival", "survival-rate", "mortality", 
-                         "percent-mortality") ~ "survival",
-    TRUE ~ response_type
-  ))
-
-#### 5. clean and classify habitats ####
-# tidying habitat information
-data <- data %>%
-  mutate(habitat = if_else(habitat == "coral reef", "reef", habitat)) %>%
-  mutate(habitat = if_else(habitat == "Marine", "marine", habitat)) %>%
-  mutate(habitat = if_else(habitat == "mixed", "brackish", habitat)) %>%
-  mutate(habitat = if_else(habitat == "n/a", NA, habitat)) %>%
-  mutate(habitat = if_else(habitat == "", NA, habitat)) %>%
-  mutate(habitat = if_else(habitat == "sea", "marine", habitat)) %>%
-  mutate(habitat = if_else(habitat == "ocean", "marine", habitat)) %>%
-  mutate(habitat_water = case_when(
-    habitat %in% c("sound", "marine rockpools", "bay", "marine", "coastal","marine estuary", "intertidal salt marshes", "gulf", "fjord", "reef", "intertidal", "harbour", "marine shelf") ~ "marine",
-    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "streams", "reservoir", "freshwater cove") ~ "freshwater",
-    habitat %in% c("wetlands", "lagoon", "estuary", "mangrove creek", "brackish") ~ "brackish",
-    TRUE ~ NA  # for the NA ones, should get this information from species later on 
-  ))
-
-data <- data %>%
-  mutate(land_or_sea = case_when(
-    habitat %in% c("ocean", "sound", "marine rockpools", "bay", "sea","marine", "coastal","marine estuary", "intertidal salt marshes","gulf", "fjord", "reef", "intertidal", "harbour", "marine shelf","coastal", "estuary") ~ "oceanic",
-    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "streams", "wetlands", "lagoon", "mangrove creek", "reservoir", "freshwater cove") ~ "terrestrial",
-    TRUE ~ NA
   ))
 
 #### 6. generate curve IDs for mean response curves ####
@@ -128,7 +88,7 @@ mean_tpcs <- data %>%
   filter(!is.na(response_mean)) %>%
   group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group, collection_site) %>%
   dplyr::select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
-         acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
+                acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
   mutate(curve_ID = ifelse(length(unique(cohort_ID)) == n(),
                            as.character(cur_group_id()),
                            paste(cur_group_id(), cohort_ID, sep = "_"))) %>%
@@ -160,7 +120,7 @@ start_id <- max(mean_tpcs$curve_ID, na.rm = TRUE) + 1
 ind_tpcs <- ind_tpcs %>%
   group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group, collection_site) %>%
   dplyr::select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
-         acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
+                acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
   mutate(curve_ID = as.numeric(cur_group_id() + start_id - 1)) %>%
   mutate(response_curve_type = "individual") %>%
   dplyr::select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
@@ -185,7 +145,7 @@ start_id2 <- max(ind_tpcs$curve_ID, na.rm = TRUE) + 1 #new start_ID
 median_tpcs <- median_tpcs %>%
   group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group, collection_site) %>%
   dplyr::select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
-         acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
+                acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
   mutate(curve_ID = as.numeric(cur_group_id() + start_id2 - 1)) %>%
   mutate(response_curve_type = "median") %>%
   dplyr::select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
@@ -209,7 +169,7 @@ start_id3 <- max(median_tpcs$curve_ID, na.rm = TRUE) + 1 #new start_id
 min_max_tpcs <- min_max_tpcs %>%
   group_by(study_ID, species_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group, collection_site) %>%
   dplyr::select(study_ID, species_ID, cohort_ID, curve_type, response_type, response_unit, sex, treatment_1_group, treatment_2_group,
-         acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
+                acclim_temp, test_temp, response_ind, response_mean, response_median, min_response, max_response, everything()) %>%
   mutate(curve_ID = as.numeric(cur_group_id() + start_id3 - 1)) %>%
   mutate(response_curve_type = "min-max") %>%
   dplyr::select(cohort_ID, curve_ID, response_curve_type, everything()) %>%
@@ -250,6 +210,8 @@ length(unique(curves$curve_ID)) #457
 
 #make a response_value category so that you can run stats on all at the same time#
 curves <- curves %>%
+  mutate(response_ind = as.numeric(response_ind)) %>%
+  mutate(response_median = as.numeric(response_median)) %>%
   mutate(response_value = case_when(
     response_curve_type == "mean" ~ response_mean,
     response_curve_type == "individual" ~ response_ind,
@@ -257,13 +219,25 @@ curves <- curves %>%
   )) %>%
   select(curve_ID, study_ID, species_ID, curve_type, response_type, test_temp, response_value, response_curve_type, everything())
 
-####10. make sure lat/long is numeric ####
+
+response_new_names <- read.csv(here("raw-data", "raw_response_categories.csv"))
+response_ontology <- read.csv(here("raw-data", "response_ontology.csv")) %>%
+  rename(given_trait_name = Trait.Name) %>%
+  filter(if_any(everything(), ~ . != "")) 
+
 curves <- curves %>%
-  mutate(across(c(response_value, latitude, longitude), as.numeric)) %>%
-  mutate(abs_latitude = abs(latitude))
+  left_join(response_new_names %>% select(new.name, curve_ID),join_by(curve_ID))
+curves <- curves %>%
+  select(curve_ID, response_type, new.name, everything()) %>%
+  rename(given_trait_name = new.name)
+
+curves_new <- curves %>%
+  left_join(response_ontology %>% select(Trait.Group, given_trait_name, Trait.motivation), join_by(given_trait_name)) %>%
+  select(curve_ID, response_type, given_trait_name, Trait.Group, Trait.motivation, everything())
+
 
 ####handle survival and mortality curves in this script #### 
-curves <- curves %>%
+curves_new <- curves_new %>%
   mutate(
     # convert to survival only for mortality curves
     response_value = if_else(
@@ -277,25 +251,56 @@ curves <- curves %>%
       response_type
     ))
 
-length(unique(curves$study_ID)) #118
-length(unique(curves$species_ID)) #107
+
+
+#### 5. clean and classify habitats ####
+# tidying habitat information
+curves_new <- curves_new %>%
+  mutate(habitat = if_else(habitat == "coral reef", "reef", habitat)) %>%
+  mutate(habitat = if_else(habitat == "Marine", "marine", habitat)) %>%
+  mutate(habitat = if_else(habitat == "mixed", "brackish", habitat)) %>%
+  mutate(habitat = if_else(habitat == "n/a", NA, habitat)) %>%
+  mutate(habitat = if_else(habitat == "", NA, habitat)) %>%
+  mutate(habitat = if_else(habitat == "sea", "marine", habitat)) %>%
+  mutate(habitat = if_else(habitat == "ocean", "marine", habitat)) %>%
+  mutate(habitat_water = case_when(
+    habitat %in% c("sound", "marine rockpools", "bay", "marine", "coastal","marine estuary", "intertidal salt marshes", "gulf", "fjord", "reef", "intertidal", "harbour", "marine shelf") ~ "marine",
+    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "streams", "reservoir", "freshwater cove") ~ "freshwater",
+    habitat %in% c("wetlands", "lagoon", "estuary", "mangrove creek", "brackish") ~ "brackish",
+    TRUE ~ NA  # for the NA ones, should get this information from species later on 
+  ))
+
+curves_new <- curves_new %>%
+  mutate(land_or_sea = case_when(
+    habitat %in% c("ocean", "sound", "marine rockpools", "bay", "sea","marine", "coastal","marine estuary", "intertidal salt marshes","gulf", "fjord", "reef", "intertidal", "harbour", "marine shelf","coastal", "estuary") ~ "oceanic",
+    habitat %in% c("river", "lake", "swamp", "creek", "pond", "stream", "streams", "wetlands", "lagoon", "mangrove creek", "reservoir", "freshwater cove") ~ "terrestrial",
+    TRUE ~ NA
+  ))
+
+####10. make sure lat/long is numeric ####
+curves_new <- curves_new %>%
+  mutate(across(c(response_value, latitude, longitude), as.numeric)) %>%
+  mutate(abs_latitude = abs(latitude))
+
+length(unique(curves_new$study_ID)) #118
+length(unique(curves_new$species_ID)) #107
 
 #### cleaning up other characteristics ####
 #life stage tested
-curves <- curves %>%
+curves_new <- curves_new %>%
   mutate(life_stage_tested = ifelse(life_stage_tested == "juvenile ", "juvenile", life_stage_tested)) %>%
   mutate(life_stage_tested = ifelse(life_stage_tested %in% c("immature", "fingerling", "yearling"), "juvenile", life_stage_tested)) %>%
   mutate(life_stage_tested = ifelse(life_stage_tested == "mature", "adult", life_stage_tested)) %>%
   mutate(life_stage_tested = ifelse(life_stage_tested %in% c("embyro", "egg"), "embryo", life_stage_tested)) %>%
   mutate(life_stage_tested = ifelse(life_stage_tested == "larval", "larvae", life_stage_tested))
 #life stage manipulated
-curves <- curves %>%
+curves_new <- curves_new %>%
   mutate(life_stage_manip = ifelse(life_stage_manip %in% c("immature", "fingerling", "yearling"), "juvenile", life_stage_tested)) %>%
   mutate(life_stage_manip = ifelse(life_stage_manip == "mature", "adult", life_stage_tested)) %>%
   mutate(life_stage_manip = ifelse(life_stage_manip == "egg", "embryo", life_stage_tested)) %>%
   mutate(life_stage_manip = ifelse(life_stage_manip == "larval", "larvae", life_stage_tested))
 #treatments
-curves <- curves %>%
+curves_new <- curves_new %>%
   mutate(treatment_1_type = ifelse(treatment_1_type %in% c("PCO2", "co2"), "CO₂/pH", treatment_1_type)) %>%
   mutate(treatment_1_type = ifelse(treatment_1_type %in% c("acclimation", "acclimation-temp", "acclimation_to_seasonal_conditions", "incubation_temp"), "Acclimation", treatment_1_type)) %>%
   mutate(treatment_1_type = ifelse(treatment_1_type %in% c("ration", "prey-density", "ration offered ", "ration offered", "food ration", "food-type", "food", "week-of-refeeding-after-3-weeks-starvation", "satiation"), "Ration", treatment_1_type)) %>%
@@ -305,7 +310,7 @@ curves <- curves %>%
   mutate(treatment_1_type = ifelse(treatment_1_type %in% c("lumination", "time-of-day"), "Photoperiod", treatment_1_type)) %>%
   mutate(treatment_1_type = ifelse(treatment_1_type == "oxygen-level", "Oxygen", treatment_1_type))
 
-curves <- curves %>%
+curves_new <- curves_new %>%
   mutate(treatment_2_type = ifelse(treatment_2_type == "mass", "Size", treatment_2_type)) %>%
   mutate(treatment_2_type = ifelse(treatment_2_type == "satiation", "Ration", treatment_2_type))
 
@@ -313,6 +318,4 @@ curves <- curves %>%
 length(unique(curves$curve_ID)) #457 unique curve_IDs
 
 saveRDS(curves, file = here("processed-data", "wild-tpcsupdated.RdS"))
-
-
 
