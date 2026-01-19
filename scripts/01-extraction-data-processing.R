@@ -47,18 +47,6 @@ data <- data %>%
       curve_type %in% c("accute-exposure", "acute", "acute-exposure") ~ "acute-change",
       curve_type %in% c("batch-aclim", "batch-acclimated") ~ "batch-acclim",
       TRUE ~ curve_type))
-
-## un-log transform responses that are logged
-##need to check these curves to make sure i dont need to refit.
-data <- data %>%
-  mutate(response_mean = as.numeric(response_mean)) %>%
-  mutate(response_mean = ifelse(response_type %in% c("log-SMR", "log-active-metabolic-rate", "log-metabolic-scope"),
-      10^response_mean, response_mean))
-#transform the natural logged one
-data <- data %>%
-  mutate(response_mean = as.numeric(response_mean)) %>%
-  mutate(response_mean = ifelse(response_type == "ln-whole-oxygen-embryo-consumption",
-         exp(response_mean), response_mean))
          
 ## tidy raw response_type synonyms ##
 data <- data %>%
@@ -212,6 +200,7 @@ length(unique(curves$curve_ID)) #457
 curves <- curves %>%
   mutate(response_ind = as.numeric(response_ind)) %>%
   mutate(response_median = as.numeric(response_median)) %>%
+  mutate(response_mean = as.numeric(response_mean)) %>%
   mutate(response_value = case_when(
     response_curve_type == "mean" ~ response_mean,
     response_curve_type == "individual" ~ response_ind,
@@ -219,6 +208,22 @@ curves <- curves %>%
   )) %>%
   select(curve_ID, study_ID, species_ID, curve_type, response_type, test_temp, response_value, response_curve_type, everything())
 
+
+## un-log transform responses that are logged
+##need to check these curves to make sure i dont need to refit.
+curves <- curves %>%
+  mutate(response_value = ifelse(response_type %in% c("log-SMR", "log-active-metabolic-rate", "log-metabolic-scope"),
+                                 10^response_mean, response_mean))
+#transform the natural logged one
+curves <- curves %>%
+  mutate(response_value = ifelse(response_type == "ln-whole-oxygen-embryo-consumption",
+                                 exp(response_mean), response_mean))
+
+curves <- curves %>%
+  mutate(response_value = ifelse(response_type == "development-rate",
+                                 1/response_ind, response_ind)) %>%
+  mutate(response_unit = ifelse(response_type == "development-rate", "1/days", response_unit))
+  
 
 response_new_names <- read.csv(here("raw-data", "raw_response_categories.csv"))
 response_ontology <- read.csv(here("raw-data", "response_ontology.csv")) %>%
@@ -234,6 +239,8 @@ curves <- curves %>%
 curves_new <- curves %>%
   left_join(response_ontology %>% select(Trait.Group, given_trait_name, Trait.motivation), join_by(given_trait_name)) %>%
   select(curve_ID, response_type, given_trait_name, Trait.Group, Trait.motivation, everything())
+
+
 
 
 ####handle survival and mortality curves in this script #### 
@@ -315,8 +322,7 @@ curves_new <- curves_new %>%
   mutate(treatment_2_type = ifelse(treatment_2_type == "satiation", "Ration", treatment_2_type))
 
 
-length(unique(curves$curve_ID)) #457 unique curve_IDs
+length(unique(curves_new$curve_ID)) #457 unique curve_IDs
 
 saveRDS(curves_new, file = here("processed-data", "wild-tpcsupdated.RdS"))
-
 
