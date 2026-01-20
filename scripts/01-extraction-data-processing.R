@@ -237,7 +237,8 @@ response_ontology <- read.csv(here("raw-data", "response_ontology.csv")) %>%
   filter(if_any(everything(), ~ . != "")) 
 
 curves <- curves %>%
-  left_join(response_new_names %>% select(new.name, curve_ID),join_by(curve_ID))
+  left_join(response_new_names %>% select(new.name, curve_ID, response_type),join_by(curve_ID, response_type))
+
 curves <- curves %>%
   select(curve_ID, response_type, new.name, everything()) %>%
   rename(given_trait_name = new.name)
@@ -245,8 +246,6 @@ curves <- curves %>%
 curves_new <- curves %>%
   left_join(response_ontology %>% select(Trait.Group, given_trait_name, Trait.motivation), join_by(given_trait_name)) %>%
   select(curve_ID, response_type, given_trait_name, Trait.Group, Trait.motivation, everything())
-
-
 
 
 ####handle survival and mortality curves in this script #### 
@@ -329,6 +328,10 @@ curves_new <- curves_new %>%
 
 
 length(unique(curves_new$curve_ID)) #457 unique curve_IDs
+
+check <- curves_new %>%
+  select(curve_ID, Trait.motivation, Trait.Group, given_trait_name, response_type, response_unit) %>%
+  distinct()
 
 saveRDS(curves_new, file = here("processed-data", "wild-tpcsupdated.RdS"))
 
