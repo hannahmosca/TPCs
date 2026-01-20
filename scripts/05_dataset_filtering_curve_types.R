@@ -1,13 +1,15 @@
 # Hannah Mosca # 
-# this script is to subset the cleaned performance datasets into curve types #
-rm(list=ls())
-library(conflicted)
+# this script is to subset the cleaned performance datasets into curve types 
 library(dplyr)
+library(tidyverse)
+library(here)
+library(ggforce)
+rm(list=ls())
 
-conflict_prefer("select", "dplyr")
 #read in the data
-curves <- readRDS(here('processed-data', 'wild-tpcs.RdS'))
-#### 01.normalize all of the datasets so can work with scaled values ####
+curves <- readRDS(here('processed-data', 'wild-tpcsupdated.RdS'))
+
+#### 01. normalize all of the datasets so can work with scaled values ####
 data_scaled <- curves %>%
   select(curve_ID, test_temp, response_value, response_type, response_unit) %>%
   group_by(curve_ID, test_temp) %>%
@@ -17,6 +19,7 @@ data_scaled <- curves %>%
   mutate(response_scaled = mean_response / max(mean_response, na.rm = TRUE)) %>%  # scale within curve
   ungroup() %>%
   distinct(curve_ID, test_temp, response_type, mean_response, response_scaled, response_unit)
+
 #### 02. add columns for datasets that are left bounded, right bounded, and reach an optimum ####
 
 #optimum: curves that have a max response sandwiched by responses that are less on both sides ...ie go up and come down
@@ -39,20 +42,40 @@ data_scaled <- left_join(data_scaled, optimum_check, by = "curve_ID")
 optimum_curves <- optimum_check %>%
   filter(has_optimum == TRUE)
 
-opt_list <- unique(optimum_curves$curve_ID) #checked these, and am removing '156' and putting it in no-opt
-opt_list <- opt_list[!opt_list %in% 156] ###OPT CURVE LIST###
-adding_to_topt <- c(80, 22, 87, 226, 228, 232, 234, 265, 304, 314, 313, 325, 401, 312, 416, 230, 74, 91, 164, 199, 222, 223, 227, 231, 233, 242, 243, 253, 261, 263, 266, 311, 383, 386, 389, 397, 405, 408, 412, 71, 63) # these are ones i got from ctmin and ctmax and unbounded_NO
+#### testing station ####
+responses <- data_scaled %>%
+  select(curve_ID, response_type, response_unit) %>%
+  distinct()
+curve_labels <- responses %>%
+  mutate(label = paste0(response_type, " (", curve_ID, ")")) %>%
+  select(curve_ID, label) %>%
+  deframe()
+ggplot() +
+  geom_point(data = data_scaled %>%
+               filter(has_optimum == TRUE),
+             aes(x = test_temp, y = response_scaled)) +
+  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 4, nrow = 4, page = 11,
+                      labeller = labeller(curve_ID = curve_labels))
+
+
+
+opt_list <- unique(optimum_curves$curve_ID) #checked these, all fit criteria
+
+#this has not been updated or verified
+adding_to_topt <- c(18, 81, 212, 213, 216, 218, 250, 289, 300, 311, 359, 433, 448, 69, 168, 169, 215, 20, 54, 53, 56, 64, 67, 73, 77, 148, 192, 200, 207, 208, 211,223, 217, 228, 247, 251, 252, 278, 294, 325, 341, 345, 411, 423, 425, 427, 249, 436, 437, 438, 439, 440, 444, 455)
+
+
+ # these are ones i got from ctmin and ctmax and unbounded_NO
 opt_list <- c(opt_list, adding_to_topt)
 opt_list <- unique(opt_list)
 
 ####03. Handling datasets without an optimum ####
-non_opt <- curves %>%
-  filter(!(curve_ID %in% opt_list))
+non_opt <- data_scaled %>%
+  filter(has_optimum == FALSE)
 non_opt_list <- unique(non_opt$curve_ID)
 
 # Compute left and right bounds
-non_opt <- data_scaled %>%
-  filter(curve_ID %in% non_opt_list) %>%
+non_opt <- non_opt %>%
   group_by(curve_ID) %>%
   arrange(test_temp) %>%
   mutate(
@@ -67,30 +90,62 @@ non_opt <- data_scaled %>%
 
 #CTMIN only datasets
 ctmin <- non_opt %>%
-  filter(left_bound == "yes")
-###after this check, adding 22, 87, 226, 228, 232, 234, 265, 304, 314, 313, 325, 401, 312, 416 to topt dataframe list
-###78 is really confusing, going to a confusing curve ID list
+  filter(left_bound == "yes") #criteria 
+
+ggplot() +
+  geom_point(data = data_scaled %>%
+               filter(curve_ID == "125"),
+             aes(x = test_temp, y = response_scaled)) +
+  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 3, nrow = 3, page = 1,
+                      labeller = labeller(curve_ID = curve_labels))
+
+###after this check, adding 18, 81, 212, 213, 216, 218, 250, 289, 300, 311, 359, 433, 448  to topt dataframe list
+
+###72 is really confusing, going to a confusing curve ID list
+
 ctmin_only <- unique(ctmin$curve_ID) ##checking ctmin only
 #FINAL CTMIN ONLY LIST#
-ctmin_only_list <- ctmin_only[!ctmin_only %in% c(22, 87, 226, 228, 232, 234, 265, 304, 314, 313, 325, 401, 312, 416, 78)] 
-adding_to_ctmin <- c(150, 400)
+ctmin_only_list <- ctmin_only[!ctmin_only %in% c(18, 81, 212, 213, 216, 218, 250, 289, 300, 311, 359, 433, 448, 72)] 
+adding_to_ctmin <- c(22)
 ctmin_only_list <- c(ctmin_only_list, adding_to_ctmin)
 
 #CTMAX only datasets
+####testing station####
+ggplot() +
+  geom_point(data = non_opt %>%
+               filter(right_bound == "yes"),
+             aes(x = test_temp, y = response_scaled)) +
+  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 3, nrow = 3, page = 1,
+                      labeller = labeller(curve_ID = curve_labels))
+##irregular: 29 
+#move to topt: 69, 168, 169, 212, 215, 448
 ctmax <- non_opt %>%
   filter(right_bound == "yes")
 ctmax_only <- unique(ctmax$curve_ID) ##checking ctmin only
 #FINAL CTMAX ONLY LIST#
-ctmax_only_list <- ctmax_only[!ctmax_only %in% c(36, 55, 56, 185, 186, 226, 230, 416)] #ones i am removing from ctmax
+ctmax_only_list <- ctmax_only[!ctmax_only %in% c(69, 168, 169, 212, 215, 448, 29)] #ones i am removing from ctmax
 
 #niether CTMIN or CTMAX
+ggplot() +
+  geom_point(data = non_opt %>%
+               filter(left_bound == "no") %>%
+               filter(right_bound == "no"),
+             aes(x = test_temp, y = response_scaled)) +
+  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 3, nrow = 3, page = 27,
+                      labeller = labeller(curve_ID = curve_labels))
+#irregular: 3, 4, 12, 19, 31, 32, 33, 63, 155, 178, 197, 209, 319, 320, 322, 324, 332, 334, 340, 353, 354, 355, 356, 357, 358, 361, 364, 376, 378, 384
+#move to opt: 20, 54, 53, 56, 64, 67, 73, 77, 148, 192, 200, 207, 208, 211,223, 217, 228, 247, 249, 251, 252, 278, 294, 325, 341, 345, 411, 423, 425, 427, 249, 436, 437, 438, 439, 440, 444, 455
+#move to ctmin: 22
 unbounded_NO <- non_opt %>%
   filter(left_bound == "no") %>%
   filter(right_bound == "no")
 unbounded_NO <- unique(unbounded_NO$curve_ID) 
-unbounded_NO_list <- unbounded_NO[!unbounded_NO %in% c(80, 7, 8, 17, 23, 33, 38, 39, 40, 54, 60, 61, 63, 70, 71, 84, 93, 111, 125, 145, 152, 172, 202, 205, 209, 210, 215, 224, 228, 277, 308, 306, 297, 315, 316, 320, 322, 323, 324, 338, 341, 343, 345, 350, 373, 388, 399, 404, 406, 407, 423, 25, 74, 91, 164, 199, 222, 223, 227, 231, 233, 242, 243, 253, 261, 263, 266, 267, 311, 383, 386, 389, 397, 405, 408, 412, 150)]
+unbounded_NO_list <- unbounded_NO[!unbounded_NO %in% c(20, 54, 53, 56, 64, 67, 73, 77, 148, 192, 200, 207, 208, 211,223, 217, 228, 247, 249, 251, 252, 278, 294, 325, 341, 345, 411, 423, 425, 427, 249, 436, 437, 438, 439, 440, 444, 455, 22, 3, 4, 12, 19, 31, 32, 33, 63, 155, 178, 197, 209, 319, 320, 322, 324, 332, 334, 340, 353, 354, 355, 356, 357, 358, 361, 364, 376, 378, 384)]
 
-confusing_datasets <- c(78, 36, 55, 56, 7, 8, 17, 23, 33, 38, 39, 40, 54, 60, 61, 70, 84, 93, 111, 125, 145, 152, 172, 202, 205, 209, 210, 215, 224, 277, 308, 306, 297, 315, 316, 320, 322, 323, 324, 338, 341, 343, 345, 350, 373, 388, 399, 404, 406, 407, 423, 176, 278, 307, 12, 34, 66, 25, 267)
+confusing_datasets <- c(8, 29, 72, 3, 4, 12, 19, 31, 32, 33, 63, 155, 178, 197, 209, 319, 320, 322, 324, 332, 334, 340, 353, 354, 355, 356, 357, 358, 361, 364, 376, 378, 384, 223, 169, 168, 77, 263, 111, 136, 189)
+
+
+
 
 #### WORKING WITH OPT DATASETS ####
 ## first sort by boundedness ## i made the closeness to 0 further for this ones....
@@ -110,50 +165,96 @@ opt <- data_scaled %>%
 
 ##first bounded ones##
 #ctmin with topt datasets
+##testing
+ggplot() +
+  geom_point(data = opt %>%
+               filter(left_bound == "yes") %>%
+               filter(right_bound == "no"),
+             aes(x = test_temp, y = response_scaled)) +
+  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 3, nrow = 3, page = 5,
+                      labeller = labeller(curve_ID = curve_labels))
+
+#move to full curve: 16, 73, 218, 256, 403, 404, 434, 435, 441
+#move to confusing: 223
 ctmin_topt <- opt %>%
   filter(left_bound == "yes") %>%
   filter(right_bound == "no")
 ctmin_topt_list <- unique(ctmin_topt$curve_ID)
-ctmin_topt_list <- ctmin_topt_list[!ctmin_topt_list %in% c(253, 80, 309, 25, 157, 228, 232, 234, 265, 401, 402, 403, 20, 22, 76, 366, 367, 409, 34, 66, 400)]
+ctmin_topt_list <- ctmin_topt_list[!ctmin_topt_list %in% c(16, 73, 218, 256, 403, 404, 434, 435, 441,223)]
+
 #ctmax with topt datasets
+##testing
+ggplot() +
+  geom_point(data = opt %>%
+               filter(left_bound == "no") %>%
+               filter(right_bound == "yes"),
+             aes(x = test_temp, y = response_scaled)) +
+  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 3, nrow = 3, page = 2,
+                      labeller = labeller(curve_ID = curve_labels))
+#moving to irregular: 169, 168
+#moving to full: 215, 255
 ctmax_topt <- opt %>%
   filter(left_bound == "no") %>%
   filter(right_bound == "yes")
 ctmax_topt_list <- unique(ctmax_topt$curve_ID)
-ctmax_topt_list <- ctmax_topt_list[!ctmax_topt_list %in% c(18, 59, 225, 230, 270, 173, 361, 362)]
-adding_to_ctmax_topt <- c(185, 186)
-ctmax_topt_list <- c(ctmax_topt_list, adding_to_ctmax_topt)
+ctmax_topt_list <- ctmax_topt_list[!ctmax_topt_list %in% c(215, 255, 169, 168)]
 
 
-full <- c(309,253, 80, 173, 361, 362, 157, 228, 232, 234, 401, 402, 403, 18, 59, 225, 230, 270, 20, 22, 76, 366, 367, 409) #curves i think are full that i got from ctmax opt and ctmin opt
+
+full <- c(325, 16, 73, 218, 256, 403, 404, 434, 435, 441, 215, 255) #curves i think are full that i got from ctmax opt and ctmin opt
 
 #ctmin+ctmax+topt full curves#
+
+ggplot() +
+  geom_point(data = opt %>%
+               filter(left_bound == "yes") %>%
+               filter(right_bound == "yes"),
+             aes(x = test_temp, y = response_scaled)) +
+  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 3, nrow = 3, page = 2,
+                      labeller = labeller(curve_ID = curve_labels))
+#irregular: 210?
+#move 278 to just topt
 breadth <- opt %>%
   filter(left_bound == "yes") %>%
   filter(right_bound == "yes")
 breadth_list <- unique(breadth$curve_ID)
 breadth_list <- c(breadth_list, full)
+breadth_list <- breadth_list[!breadth_list %in% c(8, 278)]
+
 breadth_list <- unique(breadth_list)
-breadth_list <- breadth_list[!breadth_list %in% c(12)]
 
+##unbounded##
 
+ggplot() +
+  geom_point(data = opt %>%
+               filter(left_bound == "no") %>%
+               filter(right_bound == "no"),
+             aes(x = test_temp, y = response_scaled)) +
+  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 3, nrow = 3, page = 17,
+                      labeller = labeller(curve_ID = curve_labels))
+
+#moving 77, 263 to irregular
+#move 245 to inc unbounded
+#move 325 to full
 #unbounded curves
 topt_only <- opt %>%
   filter(left_bound == "no") %>%
   filter(right_bound == "no")
 topt_only <- unique(topt_only$curve_ID)
-topt_only <- topt_only[!topt_only %in% c(176, 278, 307, 271)]
+add_to_topt_only <- c(278)
+topt_only <- c(add_to_topt_only, topt_only)
+topt_only <- topt_only[!topt_only %in% c(325, 245, 77, 263)]
 
 
 ### WORKING with unbounded no opt ###
 
 library(dplyr)
 
-unbounded_curve_direction <- curves %>%
+unbounded_curve_direction <- data_scaled %>%
   group_by(curve_ID) %>%
   filter(curve_ID %in% unbounded_NO_list) %>%
-  summarize(
-    slope = lm(response_value ~ test_temp)$coefficients[2],  # slope of linear trend
+  mutate(
+    slope = lm(response_scaled ~ test_temp)$coefficients[2],  
     direction = case_when(
       slope > 0 ~ "increasing",
       slope < 0 ~ "decreasing",
@@ -162,17 +263,45 @@ unbounded_curve_direction <- curves %>%
   )
 increasing_unbounded <- unbounded_curve_direction %>%
   filter(direction == "increasing")
+
+ggplot() +
+  geom_point(data = unbounded_curve_direction %>%
+               filter(direction == "increasing"), 
+             aes(x = test_temp, y = response_scaled)) +
+  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 3, nrow = 3, page = 15,
+                      labeller = labeller(curve_ID = curve_labels))
+#move to irregular: 111, 136, 189,
 inc_unbounded_NO_list <- unique(increasing_unbounded$curve_ID)
-add_to_inc <- c(141, 156, 271)
+add_to_inc <- c(245)
 inc_unbounded_NO_list <- c(inc_unbounded_NO_list, add_to_inc)
+inc_unbounded_NO_list <- inc_unbounded_NO_list[!inc_unbounded_NO_list %in% c(111, 136, 189, 48)]
+
+
+##decreasing unbounded
+
+ggplot() +
+  geom_point(data = unbounded_curve_direction %>%
+               filter(direction == "decreasing"), 
+             aes(x = test_temp, y = response_scaled)) +
+  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 3, nrow = 3, page = 5,
+                      labeller = labeller(curve_ID = curve_labels))
 decreasing_unbounded <- unbounded_curve_direction %>%
   filter(direction == "decreasing")
 dec_unbounded_NO_list <- unique(decreasing_unbounded$curve_ID)
-dec_unbounded_NO_list <- dec_unbounded_NO_list[!dec_unbounded_NO_list %in% c(141, 156)]
+add_to_dec <- c(48)
+dec_unbounded_NO_list <- c(dec_unbounded_NO_list, add_to_dec)
+
 
 # now i have these vectors that hold all of the curves sorted
 all <- c(topt_only, ctmax_only_list, ctmin_only_list, inc_unbounded_NO_list, dec_unbounded_NO_list, confusing_datasets, ctmin_topt_list, ctmax_topt_list, breadth_list)
 length(unique(all))
+
+# want to put curveID 446 from unbounded IN to ctmin_topt_list 
+# remove 446 from inc_unbounded_NO_list
+inc_unbounded_NO_list <- inc_unbounded_NO_list[inc_unbounded_NO_list != 446]
+
+# add 446 to ctmin_topt_list (avoid duplicates just in case)
+ctmin_topt_list <- unique(c(ctmin_topt_list, 446))
 
 ## 
 distinct_curves <- curves %>%
@@ -203,101 +332,16 @@ dataset_types <- distinct_curves %>%
     decreasing_side_TF = case_when(curve_ID %in% c(ctmax_topt_list, ctmax_only_list, breadth_list, dec_unbounded_NO_list) ~ TRUE, TRUE ~ FALSE)) %>%
   ungroup()
 
-# #make long
-# long_data <- dataset_types %>%
-#   select(habitat_water, topt, thermal_min, thermal_max, breadth, increasing_side, decreasing_side) %>%
-#   pivot_longer(
-#     cols = c(topt, thermal_min, thermal_max, breadth, increasing_side, decreasing_side),
-#     names_to = "parameter",
-#     values_to = "is_true"
-#   )
-summary_counts <- long_data %>%
-#   group_by(habitat_water, parameter) %>%
-#   summarise(n_true = sum(is_true, na.rm = TRUE), .groups = "drop")
-
-
-b <- ggplot(summary_counts, aes(x = reorder(parameter, -n_true), y = n_true, fill = habitat_water)) +
-  geom_col(position = "stack") +  
-  scale_fill_manual(
-    values = c(
-      "marine" = "navy",
-      "freshwater" = "darkgreen",
-      "brackish" = "gold"
-    )
-  ) +
-  labs(
-    title = "Count of datasets per parameter",
-    x = "Thermal Parameter",
-    y = "Count",
-    fill = "Habitat Type"
-  ) +
-  scale_x_discrete(
-    labels = c(
-      "topt" = "Thermal Optimum",
-      "thermal_min" = "Thermal Minimum",
-      "thermal_max" = "Thermal Maximum",
-      "breadth" = "Thermal Breadth",
-      "increasing_side" = "Performance Rise",
-      "decreasing_side" = "Performance fall"
-    )
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank()
-  )
-b
-ggsave("dataset_type_by_param_his.pdf", plot = b, path = here("figures"), width = 7, height = 4)
-
-
-distinct_curves <- distinct_curves %>%
-  mutate(dataset_type = factor(
-    dataset_type,
-    levels = c(
-      "full_curve",
-      "left_bound_withopt",
-      "right_bound_withopt",
-      "topt",
-      "left_bound",
-      "right_bound",
-      "unbounded_increasing",
-      "unbounded_decreasing",
-      "irregular"
-    )
-  ))
-
-a <- ggplot(
-  data = distinct_curves %>%
-    group_by(curve_ID) %>%
-    slice(1),
-  aes(x = params_we_can_get, fill = habitat_water)
-) +
-  geom_bar(position = "stack") +
-  theme_minimal() +
-  xlab("Parameter") +
-  ylab("Count of Curves") +
-  ggtitle("Distribution of Curve Types by Habitat") +
-  labs(fill = "Habitat Type") +
-  scale_fill_manual(
-    values = c(
-      "marine" = "darkblue",     
-      "freshwater" = "darkgreen",  
-      "brackish" = "gold")
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank()
-  )
-
-a
-c
-
 
 
 ###OUTPUT###
 curves <- curves %>%
   left_join(dataset_types %>% select(-(habitat_water)), join_by(curve_ID))
-saveRDS(curves, file = here('processed-data', "wild_tpcs_data_coverage_sorted.RDS"))
+
+distinct <- curves %>%
+  select(dataset_type, response_unit, curve_ID, response_type, given_trait_name) %>%
+  distinct()
+
+
+saveRDS(curves, file = here('processed-data', "wild_tpcs_data_coverage_sorted19_1_2026.RDS"))
+
