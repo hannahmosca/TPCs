@@ -1,18 +1,27 @@
 #### script for filtering models and datasets for analysis ####
 #### load packages and data ####
 ####have not done this script yet, left off with the fitted valid data that i have not figured out how to filter yet ###
+
+####01: script set up ####
+#clean env and load packages
 rm(list=ls())
 library(here)
 library(dplyr)
 library(ggplot2)
 library(ggforce)
 library(tidyverse)
-curves <- readRDS(here('processed-data', 'wild_tpcs_data_coverage_sorted.RdS'))
-model_preds <- readRDS(here('processed-data', 'all_model_predictions_01_10_25.RDS'))
-params <- readRDS(here('processed-data', 'all_model_params_01_10_25.RdS'))
-model_evaluations <- readRDS(here('processed-data', 'model_fit_evaluations_01_10_25.RDS'))
-length(unique(model_preds$curve_ID)) #422
 
+#load data, but filter out the curves i needed to refit 
+curves <- readRDS(here('processed-data', 'wild_tpcs_data_coverage_sorted19_1_2026.RDS'))
+model_preds <- readRDS(here('processed-data', 'all_model_predictions_19_1_26.RDS'))
+params <- readRDS(here('processed-data', 'all_model_params_19_1_26.RDS'))
+model_evaluations <- readRDS(here('processed-data', 'model_fit_evaluations_19_1_26.RDS'))
+
+
+length(unique(model_evaluations$curve_ID)) #457
+
+#### 02 restrain working models to those that predict within reasonable range ####
+#within 1sd of min and max
 curves_sd <- curves %>%
   group_by(curve_ID) %>%
   mutate(sd_response = sd(response_value, na.rm = TRUE),
@@ -21,8 +30,7 @@ curves_sd <- curves %>%
          min_temp = min(test_temp, na.rm = TRUE),
          max_temp = max(test_temp, na.rm = TRUE)) %>%
   ungroup() %>%
-  mutate(curve_ID = as.numeric(curve_ID)) %>%
-  select(curve_ID, response_value, test_temp, sd_response, max_1sd, min_1sd, min_temp, max_temp, dataset_type, thermal_min_TF, thermal_max_TF) 
+  mutate(curve_ID = as.numeric(curve_ID))
 #Attach bounds to fitted data ###
 model_preds_with_bounds <- model_preds %>%
   left_join(
@@ -35,7 +43,7 @@ valid_models <- model_preds_with_bounds %>%
   summarise(valid = all(.fitted >= min_1sd & .fitted <= max_1sd), .groups = "drop") %>%
   filter(valid) %>%
   select(-valid) %>%
-  filter(model != "ratkowsky") # this model is behaving weirdly
+  filter(model != "ratkowsky") 
 
 ###also want a filter that is if the model predicts ctmin or ctmax to be more than 5 degrees on the x away from the min temp tested and max temp tested
 # both for full curve ones
@@ -71,22 +79,62 @@ valid_models <- valid_models %>%
         thermal_min_TF != TRUE & thermal_max_TF != TRUE
       )
   )
+
 ### we lost some curveIDs
-length(unique(valid_models$curve_ID)) # go from #421 to #414 datasets when i filter out the SD
+length(unique(valid_models$curve_ID)) # go from #457 to #456 datasets when i filter out the SD
 not_curves <- curves %>%
   select(curve_ID) %>%
   filter(!(curve_ID %in% valid_models$curve_ID)) %>%
-  distinct() # lost = 51  62 125  26  25  33  70
+  distinct() # lost = 63 and 278 (63 is irregular)
+not_curves_list <- unique(not_curves$curve_ID)
+#check these#
+ggplot() +
+  geom_point(data = curves %>% 
+               filter(curve_ID %in% not_curves_list),
+             aes(x = test_temp, y = response_value)) +
+  geom_line(data = model_preds %>%
+              filter(curve_ID %in% not_curves_list),
+            aes(x = test_temp, y = .fitted, colour = model)) +
+  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 4, nrow = 4, page = 1) +
+  scale_color_manual(
+    values = c(
+      "johnsonlewin" = "slateblue", 
+      "lactin2" = "#4DAF4A",  
+      "oneill"= "magenta", 
+      "ratkowsky" = "yellow",  
+      "rezende" = "#A65628",  
+      "spain" = "royalblue3",  
+      "thomas" = "#999999",  
+      "weibull" = "black"  ,
+      "hinshelwood" = "aquamarine",
+      "briere" = "lightblue", 
+      "gaussian" = "maroon",
+      "quadratic" = "green"
+    )
+  ) +
+  theme_minimal() +
+  labs(x = "Test Temperature", y = "Response", color = "Model")
+
+
+
+
+
+
 valid_preds <- model_preds %>%
   semi_join(valid_models, by = c("curve_ID", "model"))
-rm(model_preds)
-rm(model_preds_with_bounds)
+
 valid_model_evaluations <- model_evaluations %>%
   inner_join(valid_models, by = c("curve_ID", "model"))
+
 valid_params <- params %>%
   inner_join(valid_models %>% select(model, curve_ID), by = c("curve_ID", "model"))
+
+#make some space
+rm(model_preds)
+rm(model_preds_with_bounds)
 rm(model_evaluations)
 rm(params)
+
 #### get top 2 models for each dataset? ####
 top_models <- valid_model_evaluations %>%
   group_by(curve_ID) %>%
@@ -124,7 +172,7 @@ top_preds <- top_model_preds %>%
   left_join(best_param, join_by(curve_ID, model))
 
 #### save the top preds/moels ####
-saveRDS(top_preds, here("processed-data", "top_model_predictions.RDS"))
+saveRDS(top_preds, here("processed-data", "top_model_predictions18_12_2025.RDS"))
 ##breadth##
 breadth_curves <- curves %>%
   filter(dataset_type == "topt") %>%
@@ -140,7 +188,8 @@ breadth_curves <- curves %>%
   ) %>%
   ungroup() %>%
   filter(usable_for_breadth)
-breadth_topt <- unique(breadth_curves$curve_ID) #64 of the topt curves can be used to get breadth to, while 59 of them cannot
+breadth_topt <- unique(breadth_curves$curve_ID) #69 of the topt curves can be used for topt
+
 ###adding cols to curves ###
 curves <- curves %>%
   mutate(
@@ -150,16 +199,16 @@ curves <- curves %>%
   )
 ## add these cols to the other dfs
 top_model_preds <- top_model_preds %>%
-  left_join(curves %>% select(curve_ID, thermal_min_TF, thermal_max_TF, breadth_TF, topt_TF, thermal_tolerance_TF, thermal_safety_margin_TF), join_by(curve_ID)) %>%
+  left_join(curves %>% select(curve_ID, thermal_min_TF, thermal_max_TF, breadth_TF, topt_TF, thermal_tolerance_TF, thermal_safety_margin_TF, increasing_side_TF, decreasing_side_TF), join_by(curve_ID)) %>%
   distinct()
 second_top_model_preds <- second_top_model_preds %>%
-  left_join(curves %>% select(curve_ID, thermal_min_TF, thermal_max_TF, breadth_TF, topt_TF, thermal_tolerance_TF, thermal_safety_margin_TF), join_by(curve_ID)) %>%
+  left_join(curves %>% select(curve_ID, thermal_min_TF, thermal_max_TF, breadth_TF, topt_TF, thermal_tolerance_TF, thermal_safety_margin_TF, increasing_side_TF, decreasing_side_TF), join_by(curve_ID)) %>%
   distinct()
 top_params <- top_params %>%
-  left_join(curves %>% select(curve_ID, thermal_min_TF, thermal_max_TF, breadth_TF, topt_TF, thermal_tolerance_TF, thermal_safety_margin_TF), join_by(curve_ID)) %>%
+  left_join(curves %>% select(curve_ID, thermal_min_TF, thermal_max_TF, breadth_TF, topt_TF, thermal_tolerance_TF, thermal_safety_margin_TF, increasing_side_TF, decreasing_side_TF), join_by(curve_ID)) %>%
   distinct()
 best_param <- best_param %>%
-  left_join(curves %>% select(curve_ID, thermal_min_TF, thermal_max_TF, breadth_TF, topt_TF, thermal_tolerance_TF, thermal_safety_margin_TF), join_by(curve_ID)) %>%
+  left_join(curves %>% select(curve_ID, thermal_min_TF, thermal_max_TF, breadth_TF, topt_TF, thermal_tolerance_TF, thermal_safety_margin_TF, increasing_side_TF, decreasing_side_TF), join_by(curve_ID)) %>%
   distinct()
 
 
@@ -175,25 +224,24 @@ curve_labels <- responses %>%
   deframe()
 
 #### TOPT ####
+library(ggforce)
 ggplot() +
   geom_point(data = curves %>%
-               filter(dataset_type == "right_bound_withopt"),
+               filter(curve_ID %in% act_eng),
              aes(x = test_temp, y = response_value)) +
-  geom_point(data = best_param %>%
-               filter(dataset_type == "right_bound_withopt"),
+   geom_point(data = best_param %>%
+                filter(curve_ID %in% act_eng),
              aes(x = topt, y = y_value_topt, color = model)) +
-   # geom_point(data = best_param %>%
-   #             filter(thermal_tolerance_TF == TRUE),
-   #           aes(x = ctmin, y = y_value_ctmin, color = model)) +
-   # geom_point(data = best_param %>%
-   #              filter(thermal_tolerance_TF == TRUE),
-   #           aes(x = ctmax, y = y_value_ctmax, color = model)) +
+   geom_point(data = best_param %>%
+                filter(curve_ID %in% act_eng),
+             aes(x = ctmin, y = y_value_ctmin, color = model)) +
+   geom_point(data = best_param %>%
+                filter(curve_ID %in% act_eng),
+             aes(x = ctmax, y = y_value_ctmax, color = model)) +
   geom_line(data = top_model_preds %>%
-              filter(dataset_type == "right_bound_withopt"),
-            aes(x = test_temp, y = .fitted, color = model), linewidth = 1) + geom_line(data = second_top_model_preds %>%                        
-                                                                                         filter(dataset_type == "right_bound_withopt"),
-            aes(x = test_temp, y = .fitted, color = model), linewidth = .5) +
-  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 4, nrow = 4, page = 1,
+              filter(curve_ID %in% act_eng),
+            aes(x = test_temp, y = .fitted, color = model), linewidth = 1) +
+  facet_wrap_paginate(~curve_ID, scales = "free", ncol = 4, nrow = 4, page = 20,
                       labeller = labeller(curve_ID = curve_labels)) +
   scale_color_manual(
     values = c(
@@ -213,6 +261,7 @@ ggplot() +
   ) +
   theme_minimal() +
   labs(x = "Test Temperature", y = "Response", color = "Model")
+
 
 
 data_types_his <- best_param %>%
@@ -237,6 +286,24 @@ data_types_long <- data_types_his %>%
 param_counts_summary <- data_types_long %>%
   filter(has_param == TRUE) %>%
   count(parameter, n_unique_temps)
+#### exploring activation energy ####
+act_eng <- top_params %>%
+  filter(dataset_type == "unbounded_increasing") %>%
+  filter(!(is.na(e)))
+###maybe look at the mean and variation around the mean acros curves? 
+ggplot(act_eng, aes(x = e)) +
+  geom_histogram(binwidth = 0.1, fill = "steelblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of parameter e", x = "e", y = "Count")
+length(unique(act_eng$curve_ID)) #128 unbinc + additional from other categories
+
+mean <- mean(act_eng$e)
+
+
+
+
+
+
 
 
 ### start here, sorted data by what param curve covers ###
@@ -261,111 +328,11 @@ ggplot(param_counts_summary, aes(x = reorder(parameter, -n), y = n, fill = as.fa
       "thermal_tolerance_TF" = "Thermal Tolerance"
     )) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-##independent treatments
+
+
 #### parameter analysis #### don't run this again
 params_with_curve_info <- best_param %>%
-  left_join(curves %>% select(curve_ID, study_ID, habitat_water, habitat, abs_latitude, latitude, longitude, response_type, response_unit, response_type_group, land_or_sea, treatment_1_group), join_by(curve_ID)) %>%
+  left_join(curves %>% select(curve_ID, study_ID, habitat_water, habitat, abs_latitude, latitude, longitude, response_type, response_unit, given_trait_name, Trait.Group, Trait.motivation, land_or_sea, treatment_1_group), join_by(curve_ID)) %>%
   distinct()
-params_with_curve_info$response_type_group <- as.factor(params_with_curve_info$response_type_group)
-library(car)
-install.packages("performance")
-library(performance)
-#### does topt increase with latitude?? #### 
-topt <- params_with_curve_info %>%
-  filter(topt_TF == TRUE) %>%
-  filter(!(is.na(abs_latitude)))
-length(unique(topt$study_ID))
-
-#is my topt equally distributed?
-hist((params_with_curve_info %>% 
-       filter(topt_TF == TRUE) %>%
-       filter(!(is.na(abs_latitude))))$topt)
-# scatter of topt and lat
-ggplot(data = params_with_curve_info %>% 
-         filter(topt_TF == TRUE) %>%
-         filter(!(is.na(abs_latitude))),
-       aes(x = abs_latitude, y = topt, color = land_or_sea)) +
-  geom_point(alpha = 0.7) +
-  labs(
-    x = "Absolute Latitude",
-    y = "Thermal Optimum",
-    title = "Scatter of Topt and latitude"
-  )
-install.packages("lmer4")
-library(lme4)
-#linear mixed effects model with study_ID as random effect
-lm_model <- lmer(topt ~ abs_latitude + (1 | study_ID), 
-                  data = params_with_curve_info %>%
-                    filter(topt_TF == TRUE, !is.na(abs_latitude)))
-install.packages("lmerTest")
-library(lmerTest)
-summary(lm_model)
-r2(lm_model)
-
-plot(residuals(lm_model))
-qqnorm(resid(lm_model))
-qqline(resid(lm_model))
-#try releveling, take in dif orders so one of three major ones is base
-lm_model2 <- lmer(topt ~ abs_latitude * land_or_sea + (1 | study_ID), 
-                 data = params_with_curve_info %>%
-                   filter(topt_TF == TRUE, !is.na(abs_latitude)))
-summary(lm_model2)
-r2(lm_model2)
-plot(residuals(lm_model2))
-qqnorm(resid(lm_model2))
-qqline(resid(lm_model2))
-install.packages("ggeffects")
-library(ggeffects)
-preds <- ggpredict(lm_model, terms = "abs_latitude")
-head(preds)
-ggplot() +
-  geom_point(data = params_with_curve_info %>%
-               filter(topt_TF == TRUE, !is.na(abs_latitude)),
-             aes(x = abs_latitude, y = topt),
-             alpha = 0.5) +
-  geom_line(data = preds, aes(x = x, y = predicted), color = "blue", size = 1.2) +
-  geom_ribbon(data = preds,
-              aes(x = x, ymin = conf.low, ymax = conf.high),
-              fill = "blue", alpha = 0.2) +
-  labs(x = "Absolute latitude (°)", y = "Thermal optimum (°C)",
-       title = "Effect of latitude on Topt (random intercept by study)") +
-  theme_minimal(base_size = 14)
-
-
-#does max temp change with study, does temp range 
-##is there still association between lat and topt after we control for variation of median, min, and max test tested
-mixed.lmer <- lmer(topt ~ abs_latitude + (1|max_temp), data = topt)
-summary(mixed.lmer)
-plot(mixed.lmer)
-qqnorm(resid(mixed.lmer))
-qqline(resid(mixed.lmer))  # points fall nicely onto the line - good!
-
-
-#### what about breadth #### 
-# scatter of topt and lat
-ggplot(data = params_with_curve_info %>% 
-         filter(breadth_TF == TRUE) %>%
-         filter(!(is.na(abs_latitude))),
-       aes(x = abs_latitude, y = breadth, color = land_or_sea)) +
-  geom_point(alpha = 0.7) +
-  geom_smooth(method = lm) +
-  labs(
-    x = "Absolute Latitude",
-    y = "Thermal breadth",
-    title = "Scatter of Topt and latitude"
-  )
-
-
-ggplot(data = params_with_curve_info %>% 
-         filter(thermal_tolerance_TF == TRUE) %>%
-         filter(!(is.na(abs_latitude))),
-       aes(x = abs_latitude, y = thermal_tolerance)) +
-  geom_point(alpha = 0.7) +
-  geom_smooth(method = lm) +
-  labs(
-    x = "Absolute Latitude",
-    y = "Thermal tolerance",
-    title = "Scatter of tolerance and latitude"
-  )
 
 saveRDS(params_with_curve_info, file = here("processed-data", "sorted_datasets_withparams.RDS"))
