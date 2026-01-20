@@ -14,7 +14,7 @@
   fitted_datasets <- readRDS(here('processed-data', 'sorted_datasets_withparams.RDS'))
   fitted_datasets <- fitted_datasets %>%
     mutate(land_or_sea = ifelse(land_or_sea == "terrestrial", "freshwater", "marine"))
-  curves <- readRDS(here('processed-data', 'wild-tpcs.Rds'))
+  curves <- readRDS(here('processed-data', 'wild-tpcsupdated.Rds'))
   
   ##all temperatures
   #freshwater all
@@ -34,20 +34,19 @@
     rename(latitude = y)
   
   ##point data
-  freshwater_points <- readRDS(here("processed-data", "freshwater_temperatures_my_points.RDS"))
-  marine_points <- readRDS(here("processed-data", "sst_temperatures_my_points.RDS"))
+  freshwater_points <- readRDS(here("processed-data", "freshwater_temperatures_my_points_17_12_2025.RDS"))
+  marine_points <- readRDS(here("processed-data", "marine_sst_summary_mypoints17_12_2025.RDS"))
 
   ##### combine all temperature data ####
   all_freshwater <- all_freshwater %>%
     mutate(enviornment = "freshwater")
   freshwater_points <- freshwater_points %>%
-    mutate(enviornment = "freshwater") %>%
-    rename(q2.5 = q_low) %>%
-    rename(q97.5 = q_high)
+    mutate(enviornment = "freshwater") 
   all_marine <- all_marine %>%
    mutate(enviornment = "marine")
   marine_points <- marine_points %>%
-    mutate(enviornment = "marine")
+    mutate(enviornment = "marine") %>%
+    select(-(median))
   
 temp_data_all <- rbind(all_freshwater, all_marine)
 point_data_all <- rbind(freshwater_points, marine_points) %>%
@@ -59,7 +58,435 @@ fits_with_temps <- fitted_datasets %>%
   left_join(point_data_all, join_by(latitude, longitude))
   
 
-#### H1: species thermal optima decreases with latitude ####
+#### Averaging topt by 'group' ####
+
+
+average_topts <- fits_with_temps %>%
+  left_join(curves %>% select(curve_ID, species_ID)) %>%
+  distinct() %>%
+  filter(topt_TF == TRUE) %>%
+  group_by(study_ID, species_ID, latitude, Trait.Group) %>% ## could also try cohort 
+  mutate(averaged_topt = mean(topt)) %>%
+  ungroup()
+
+average_topts <- average_topts %>%
+  select(study_ID, Trait.Group, species_ID, averaged_topt, abs_latitude, latitude, mean, sd, enviornment, q_high) %>%
+  distinct() #136
+
+#rename so all capitals
+average_topts <- average_topts %>%
+  mutate(
+    enviornment = case_when(
+      enviornment == "freshwater" ~ "Freshwater",
+      enviornment == "marine"     ~ "Marine",
+      TRUE                        ~ enviornment
+    ),
+    Trait.Group = case_when(
+      Trait.Group == "metabolism"      ~ "Metabolism",
+      Trait.Group == "reproduction"    ~ "Reproduction",
+      Trait.Group == "somatic growth"  ~ "Somatic Growth",
+      Trait.Group == "survival"        ~ "Survival",
+      TRUE                             ~ Trait.Group
+    )
+  )
+## avg tops and latitude
+ggplot(data = average_topts,
+       aes(x = abs_latitude, y = averaged_topt, color = enviornment)) +
+  geom_point(alpha = 0.7) +
+  scale_color_manual(
+    name = "Environment",
+    values = c("Marine" = "blue", "Freshwater" = "lightgreen")
+  ) +
+  theme_classic()
+
+
+lat_avtopt_model <- lmer(averaged_topt ~ abs_latitude * enviornment + (1 | study_ID), 
+                         data = average_topts)
+
+summary(lat_avtopt_model)
+
+#plot fitted model 
+## want to make sure only predicting on range of data
+lat_range <- average_topts %>%
+  group_by(enviornment) %>%
+  summarise(
+    min_abs_lat = min(abs_latitude),
+    max_abs_lat = max(abs_latitude))
+lat_range
+fresh_grid <- data.frame(
+  abs_latitude = seq(lat_range$min_abs_lat[lat_range$enviornment=="Freshwater"],
+                     lat_range$max_abs_lat[lat_range$enviornment=="Freshwater"],
+                     length.out = 200),
+  enviornment = "Freshwater")
+marine_grid <- data.frame(
+  abs_latitude = seq(lat_range$min_abs_lat[lat_range$enviornment=="Marine"],
+                     lat_range$max_abs_lat[lat_range$enviornment=="Marine"],
+                     length.out = 200),
+  enviornment = "Marine")
+
+pred_grid <- bind_rows(fresh_grid, marine_grid)
+pred_grid$pred <- predict(lat_avtopt_model, newdata = pred_grid, re.form = NA)
+pred_grid$se   <- predict(lat_avtopt_model, newdata = pred_grid, re.form = NA, se.fit = TRUE)$se.fit
+
+pred_grid$lower <- pred_grid$pred - 1.96 * pred_grid$se
+pred_grid$upper <- pred_grid$pred + 1.96 * pred_grid$se
+
+
+avtopt_latitude <- ggplot(data = pred_grid, aes(x = abs_latitude)) +
+  geom_point(data = average_topts, aes(x = abs_latitude, y = averaged_topt, color = enviornment, shape = Trait.Group), alpha = .75) +
+  geom_line(aes(y = pred, color = enviornment)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = enviornment), alpha = 0.20) +
+  labs(x = "Absolute Latitude", y = "Thermal Optima") +
+  scale_color_manual(
+    name = "Realm",
+    values = c("Marine" = "#1F78B4", "Freshwater" = "#33A02C")
+  ) +
+  scale_fill_manual(
+    name = "Realm",
+    values = c("Marine" = "#1F78B4", "Freshwater" = "#33A02C")
+  ) +
+  scale_shape_manual(
+    name = "Trait group",
+    values = c(
+      "Locomotion"        = 0,  
+      "Metabolism"        = 1, 
+      "Somatic Growth"    = 2,  
+      "Cardiac"           = 4,  # solid diamond
+      "Energy aquisition" = 15,   # star
+      "Reproduction"      = 17,
+      "Survival"= 8
+    )
+  ) +
+  theme_classic()
+avtopt_latitude
+
+
+
+## avg topts and meanenv. temp
+ggplot(data = average_topts,
+       aes(x = mean, y = averaged_topt, color = enviornment)) +
+  geom_point(alpha = 0.7) +
+  scale_color_manual(
+    name = "Environment",
+    values = c("Marine" = "blue", "Freshwater" = "lightgreen")
+  ) +
+  theme_classic()
+
+
+mean_avtopt_model <- lmer(averaged_topt ~ mean * enviornment + (1 | study_ID), 
+                          data = average_topts)
+
+summary(mean_avtopt_model)
+
+
+
+## want to make sure only predicting on range of data
+temp_range <- average_topts %>%
+  group_by(enviornment) %>%
+  summarise(
+    min_mean_temp = min(mean),
+    max_max_temp = max(mean))
+temp_range
+fresh_grid <- data.frame(
+  mean = seq(temp_range$min_mean_temp[temp_range$enviornment=="Freshwater"],
+             temp_range$max_max_temp[temp_range$enviornment=="Freshwater"],
+             length.out = 200),
+  enviornment = "Freshwater")
+marine_grid <- data.frame(
+  mean = seq(temp_range$min_mean_temp[temp_range$enviornment=="Marine"],
+             temp_range$max_max_temp[temp_range$enviornment=="Marine"],
+             length.out = 200),
+  enviornment = "Marine")
+
+pred_grid <- bind_rows(fresh_grid, marine_grid)
+pred_grid$pred <- predict(mean_avtopt_model, newdata = pred_grid, re.form = NA)
+pred_grid$se   <- predict(mean_avtopt_model, newdata = pred_grid, re.form = NA, se.fit = TRUE)$se.fit
+
+pred_grid$lower <- pred_grid$pred - 1.96 * pred_grid$se
+pred_grid$upper <- pred_grid$pred + 1.96 * pred_grid$se
+
+
+topt_mean_avtemp <- ggplot(data = pred_grid, aes(x = mean)) +
+  geom_point(data = average_topts, aes(x = mean, y = averaged_topt, color = enviornment, shape = Trait.Group), alpha = .75) +
+  geom_line(aes(y = pred, color = enviornment)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = enviornment), alpha = 0.20) +
+  labs(x = "Average Water Temperature", y = "Thermal Optima") +
+  scale_color_manual(
+    name = "Realm",
+    values = c("Marine" = "#1F78B4", "Freshwater" = "#33A02C")
+  ) +
+  scale_fill_manual(
+    name = "Realm",
+    values = c("Marine" = "#1F78B4", "Freshwater" = "#33A02C")
+  ) +
+  scale_shape_manual(
+    name = "Trait group",
+    values = c(
+      "Locomotion"        = 0,  
+      "Metabolism"        = 1, 
+      "Somatic Growth"    = 2,  
+      "Cardiac"           = 4,  # solid diamond
+      "Energy aquisition" = 15,   # star
+      "Reproduction"      = 17,
+      "Survival"= 8
+    )
+  ) +
+  theme_classic()
+topt_mean_avtemp
+
+
+
+## avg topts and extreme env. temp
+ggplot(data = average_topts,
+       aes(x = q_high, y = averaged_topt, color = enviornment)) +
+  geom_point(alpha = 0.7) +
+  scale_color_manual(
+    name = "Environment",
+    values = c("Marine" = "blue", "Freshwater" = "lightgreen")
+  ) +
+  theme_classic()
+
+
+extremem_avtopt_model <- lmer(averaged_topt ~ q_high * enviornment + (1 | study_ID), 
+                              data = average_topts)
+
+summary(extremem_avtopt_model)
+
+
+
+## want to make sure only predicting on range of data
+temp_range <- average_topts %>%
+  group_by(enviornment) %>%
+  summarise(
+    min_extreme_temp = min(q_high),
+    max_extreme_temp = max(q_high))
+temp_range
+fresh_grid <- data.frame(
+  q_high = seq(temp_range$min_extreme_temp[temp_range$enviornment=="Freshwater"],
+               temp_range$max_extreme_temp[temp_range$enviornment=="Freshwater"],
+               length.out = 200),
+  enviornment = "Freshwater")
+marine_grid <- data.frame(
+  q_high = seq(temp_range$min_extreme_temp[temp_range$enviornment=="Marine"],
+               temp_range$max_extreme_temp[temp_range$enviornment=="Marine"],
+               length.out = 200),
+  enviornment = "Marine")
+
+pred_grid <- bind_rows(fresh_grid, marine_grid)
+pred_grid$pred <- predict(extremem_avtopt_model, newdata = pred_grid, re.form = NA)
+pred_grid$se   <- predict(extremem_avtopt_model, newdata = pred_grid, re.form = NA, se.fit = TRUE)$se.fit
+
+pred_grid$lower <- pred_grid$pred - 1.96 * pred_grid$se
+pred_grid$upper <- pred_grid$pred + 1.96 * pred_grid$se
+
+
+topt_extreme_avtemp <- ggplot(data = pred_grid, aes(x = q_high)) +
+  geom_point(data = average_topts, aes(x = q_high, y = averaged_topt, color = enviornment, shape = Trait.Group), alpha = .75) +
+  geom_line(aes(y = pred, color = enviornment)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = enviornment), alpha = 0.20) +
+  labs(x = "Extreme Temperature", y = "Thermal Optima") +
+  scale_color_manual(
+    name = "Realm",
+    values = c("Marine" = "#1F78B4", "Freshwater" = "#33A02C")
+  ) +
+  scale_fill_manual(
+    name = "Realm",
+    values = c("Marine" = "#1F78B4", "Freshwater" = "#33A02C")
+  ) +
+  scale_shape_manual(
+    name = "Trait group",
+    values = c(
+      "Locomotion"        = 0,  
+      "Metabolism"        = 1, 
+      "Somatic Growth"    = 2,  
+      "Cardiac"           = 4,  # solid diamond
+      "Energy aquisition" = 15,   # star
+      "Reproduction"      = 17,
+      "Survival"= 8
+    )
+  ) +
+  theme_classic()
+topt_extreme_avtemp
+
+##dif between topt and env in more variable envs
+average_topts <- average_topts %>%
+  mutate(diff = averaged_topt - mean)
+
+## avg topts and extreme env. temp
+ggplot(data = average_topts,
+       aes(x = sd, y = diff, color = enviornment)) +
+  geom_point(alpha = 0.7) +
+  scale_color_manual(
+    name = "Environment",
+    values = c("Marine" = "blue", "Freshwater" = "lightgreen")
+  ) +
+  theme_classic()
+
+
+diff_sd_model <- lmer(diff ~ sd * enviornment + (1 | study_ID), 
+                      data = average_topts)
+
+summary(diff_sd_model)
+
+
+
+## want to make sure only predicting on range of data
+temp_range <- average_topts %>%
+  group_by(enviornment) %>%
+  summarise(
+    min_sd_temp = min(sd),
+    max_sd_temp = max(sd))
+temp_range
+fresh_grid <- data.frame(
+  sd = seq(temp_range$min_sd_temp[temp_range$enviornment=="Freshwater"],
+           temp_range$max_sd_temp[temp_range$enviornment=="Freshwater"],
+           length.out = 200),
+  enviornment = "Freshwater")
+marine_grid <- data.frame(
+  sd = seq(temp_range$min_sd_temp[temp_range$enviornment=="Marine"],
+           temp_range$max_sd_temp[temp_range$enviornment=="Marine"],
+           length.out = 200),
+  enviornment = "Marine")
+
+pred_grid <- bind_rows(fresh_grid, marine_grid)
+pred_grid$pred <- predict(diff_sd_model, newdata = pred_grid, re.form = NA)
+pred_grid$se   <- predict(diff_sd_model, newdata = pred_grid, re.form = NA, se.fit = TRUE)$se.fit
+
+pred_grid$lower <- pred_grid$pred - 1.96 * pred_grid$se
+pred_grid$upper <- pred_grid$pred + 1.96 * pred_grid$se
+
+
+diff_sd <- ggplot(data = pred_grid, aes(x = sd)) +
+  geom_point(data = average_topts, aes(x = sd, y = diff, color = enviornment, shape = Trait.Group), alpha = .75) +
+  geom_line(aes(y = pred, color = enviornment)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = enviornment), alpha = 0.20) +
+  labs(x = "Thermal Variation (SD)", y = "Thermal Optima - Avg Temp") +
+  scale_color_manual(
+    name = "Realm",
+    values = c("Marine" = "#1F78B4", "Freshwater" = "#33A02C")
+  ) +
+  scale_fill_manual(
+    name = "Realm",
+    values = c("Marine" = "#1F78B4", "Freshwater" = "#33A02C")
+  ) +
+  scale_shape_manual(
+    name = "Trait group",
+    values = c(
+      "Locomotion"        = 0,  
+      "Metabolism"        = 1, 
+      "Somatic Growth"    = 2,  
+      "Cardiac"           = 4,  # solid diamond
+      "Energy aquisition" = 15,   # star
+      "Reproduction"      = 17,
+      "Survival"= 8
+    )
+  ) +
+  theme_classic()
+diff_sd
+
+library(patchwork)
+
+
+
+ggsave("all_lmrs.png", plot = big, path = here("figures"), width = 10, height = 10) 
+
+big <- (avtopt_latitude + 
+          topt_mean_avtemp + 
+          topt_extreme_avtemp + 
+          diff_sd) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "right")
+
+big
+ggsave("all_lmrs.png", plot = big, path = here("figures"), width = 10, height = 10) 
+
+
+
+#### model summary ####
+install.packages("modelsummary")
+install.packages("devtools")
+devtools::install_github("rstudio/gt")
+
+library(modelsummary)
+
+
+tab <- modelsummary(
+  list(
+    "Latitude" = lat_avtopt_model,
+    "Mean temp" = mean_avtopt_model,
+    "Extreme temp" = extremem_avtopt_model,
+    "Thermal SD" = diff_sd_model
+  ),
+  statistic = "std.error",
+  stars = TRUE,
+  output = "data.frame"
+)
+knitr::kable(
+  tab,
+  digits = 2,
+  caption = "Fixed-effects estimates (± SE) from mixed-effects models"
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### dumping ####
+
 topt_lat <- ggplot(data = fits_with_temps %>%
          filter(topt_TF == TRUE) %>%
          filter(!(is.na(abs_latitude))),
@@ -71,13 +498,13 @@ topt_lat <- ggplot(data = fits_with_temps %>%
     values = c("marine" = "blue", "freshwater" = "lightgreen")
   ) +
   theme_classic()
-
+topt_lat
 topt_lat_realm <- lmer(topt ~ abs_latitude * land_or_sea + (1 | study_ID), 
                         data = fits_with_temps %>%
                           filter(topt_TF == TRUE,
                                  !is.na(abs_latitude)))
-#194 observations
-#72 studies
+#218
+#89 studies
 
 plot(residuals(topt_lat_realm))
 qqnorm(resid(topt_lat_realm))
@@ -133,11 +560,11 @@ topt_lat <- ggplot(data = pred_grid, aes(x = abs_latitude)) +
   ) +
   theme_classic()
 topt_lat
-ggsave("topt_lat_regression.jpeg", plot = topt_lat, path = here("figures"), width = 5, height = 4)
+ggsave("topt_lat_regression2.jpeg", plot = topt_lat, path = here("figures"), width = 5, height = 4)
 
 
 
-#### topt and enviornmental temp ####
+#topt and enviornmental temp 
 topt_mean_tm <- ggplot(data = fits_with_temps %>% 
          filter(topt_TF == TRUE),
        aes(x = mean, y = topt, color = enviornment)) +
@@ -151,7 +578,7 @@ topt_mean_tm <- ggplot(data = fits_with_temps %>%
     y = "Thermal Optima") +
   theme_classic()
 
-
+topt_mean_tm
 mean_topt_model <- lmer(topt ~ mean * enviornment + (1 | study_ID), 
                        data = fits_with_temps %>%
                          filter(topt_TF == TRUE))
@@ -214,10 +641,10 @@ ggsave("topt_mean_tmp_regression.pdf", plot = topt_meantemp, path = here("figure
 
 
 
-#### topt and extremes ####
+## topt and extremes #
 ggplot(data = fits_with_temps %>% 
                          filter(topt_TF == TRUE),
-                       aes(x = q97.5, y = topt, color = enviornment)) +
+                       aes(x = q_high, y = topt, color = enviornment)) +
   geom_point(alpha = 0.7) +
   scale_color_manual(
     name = "Environment",
@@ -229,7 +656,7 @@ ggplot(data = fits_with_temps %>%
   theme_classic()
 
 
-extremes_topt_model <- lmer(topt ~ q97.5 * enviornment + (1 | study_ID), 
+extremes_topt_model <- lmer(topt ~ q_high * enviornment + (1 | study_ID), 
                         data = fits_with_temps %>%
                           filter(topt_TF == TRUE))
 
@@ -244,16 +671,16 @@ temp_range <- fits_with_temps %>%
   filter(topt_TF == TRUE) %>%
   group_by(enviornment) %>%
   summarise(
-    min_upper_temp = min(q97.5),
-    max_upper_temp = max(q97.5))
+    min_upper_temp = min(q_high),
+    max_upper_temp = max(q_high))
 temp_range
 fresh_grid <- data.frame(
-  q97.5 = seq(temp_range$min_upper_temp[temp_range$enviornment=="freshwater"],
+  q_high = seq(temp_range$min_upper_temp[temp_range$enviornment=="freshwater"],
              temp_range$max_upper_temp[temp_range$enviornment=="freshwater"],
              length.out = 200),
   enviornment = "freshwater")
 marine_grid <- data.frame(
-  q97.5 = seq(temp_range$min_upper_temp[temp_range$enviornment=="marine"],
+  q_high = seq(temp_range$min_upper_temp[temp_range$enviornment=="marine"],
              temp_range$max_upper_temp[temp_range$enviornment=="marine"],
              length.out = 200),
   enviornment = "marine")
@@ -264,8 +691,8 @@ pred_grid$lower <- pred_grid$pred - 1.96 * pred_grid$se
 pred_grid$upper <- pred_grid$pred + 1.96 * pred_grid$se
 
 
-topt_extremetemp <- ggplot(data = pred_grid, aes(x = q97.5)) +
-  geom_point(data = fits_with_temps %>% filter(topt_TF == TRUE), aes(x = q97.5, y = topt, color = enviornment), alpha = .6) +
+topt_extremetemp <- ggplot(data = pred_grid, aes(x = q_high)) +
+  geom_point(data = fits_with_temps %>% filter(topt_TF == TRUE), aes(x = q_high, y = topt, color = enviornment), alpha = .6) +
   geom_line(aes(y = pred, color = enviornment)) +
   geom_ribbon(aes(ymin = lower, ymax = upper, fill = enviornment), alpha = 0.20) +
   labs(x = "Extreme Water Temperature", y = "Thermal Optima") +
@@ -288,14 +715,14 @@ topt_meantemp
 library(patchwork)
 plot <- topt_meantemp + topt_extremetemp
 plot
-ggsave("topt_envtemp.jpeg", plot = plot, path = here("figures"), width = 10, height = 5)
+ggsave("topt_envtemp2.jpeg", plot = plot, path = here("figures"), width = 10, height = 5)
 
 
-##### title ####
 ##does how close your topt is to your env temp depend on how variable your en???? ### 
 fits_with_temps <- fits_with_temps %>%
-  mutate(diff_max = q97.5 - topt) %>% 
-  mutate(diff_mean = mean - topt) 
+  mutate(diff_max = q_high - topt) %>% 
+  mutate(diff_mean = topt - mean) %>%
+  mutate(diff_max2 = topt-q_high)
 #topt and enviornmental temp
 dif <- fits_with_temps %>%
   pivot_longer(
@@ -325,7 +752,7 @@ ggsave("dif_his.pdf", plot = dif_top_en_his, path = here("figures"), width = 5, 
 ## mean diff (mean - topt)
 var_dif_mean_reg <- ggplot(data = fits_with_temps %>%
                              filter(topt_TF == TRUE),
-                           aes(x = sd, y = (mean-topt), color = enviornment)) +
+                           aes(x = sd, y = (topt-mean), color = enviornment)) +
   geom_point(alpha = 0.7) +
   scale_color_manual(
     name = "Environment",
@@ -375,7 +802,7 @@ var_dif_mean_reg <- ggplot(data = pred_grid, aes(x = sd)) +
   geom_point(data = fits_with_temps %>% filter(topt_TF == TRUE), aes(x = sd, y = diff_mean, color = enviornment), alpha = .6) +
   geom_line(aes(y = pred, color = enviornment)) +
   geom_ribbon(aes(ymin = lower, ymax = upper, fill = enviornment), alpha = 0.20) +
-  labs(x = "SD water temp", y = "Mean water temp - thermal optimum") +
+  labs(x = "SD water temp", y = "topt - mean") +
   scale_color_manual(
     name = "Realm",
     values = c("marine" = "blue", "freshwater" = "lightgreen")
@@ -392,7 +819,7 @@ var_dif_mean_reg
 ## extreme diff (q97.5 - topt)
 var_dif_extreme_reg <- ggplot(data = fits_with_temps %>%
                              filter(topt_TF == TRUE),
-                           aes(x = sd, y = (q97.5-topt), color = enviornment)) +
+                           aes(x = sd, y = (diff_max2), color = enviornment)) +
   geom_point(alpha = 0.7) +
   scale_color_manual(
     name = "Environment",
@@ -442,7 +869,7 @@ var_dif_extreme_reg <- ggplot(data = pred_grid, aes(x = sd)) +
   geom_point(data = fits_with_temps %>% filter(topt_TF == TRUE), aes(x = sd, y = diff_max, color = enviornment), alpha = .6) +
   geom_line(aes(y = pred, color = enviornment)) +
   geom_ribbon(aes(ymin = lower, ymax = upper, fill = enviornment), alpha = 0.20) +
-  labs(x = "SD water temp", y = "extremem water temp - thermal optimum") +
+  labs(x = "SD water temp", y = "Experienced thermal extreme - thermal optimum") +
   scale_color_manual(
     name = "Realm",
     values = c("marine" = "blue", "freshwater" = "lightgreen")
@@ -458,36 +885,16 @@ var_dif_extreme_reg <- ggplot(data = pred_grid, aes(x = sd)) +
 var_dif_extreme_reg
 
 both_plot <- var_dif_mean_reg + var_dif_extreme_reg
-
+both_plot
 ggsave("topt_diff_envtemp.jpeg", plot = both_plot, path = here("figures"), width = 10, height = 5)
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#### performance breadth and tolerance breadth ####
+### performance breadth and tolerance breadth ###
 tolerance <- ggplot(data = fits_with_temps %>% 
-         filter(breadth_TF == TRUE),
-       aes(x = sd, y = breadth, color = enviornment)) +
+         filter(thermal_tolerance_TF == TRUE),
+       aes(x = sd, y = thermal_tolerance, color = enviornment)) +
   geom_point(alpha = 0.7)  +
   scale_color_manual(
     name = "Environment",
@@ -498,6 +905,11 @@ tolerance <- ggplot(data = fits_with_temps %>%
     y = "thermal breadth") +
   theme_classic()
 tolerance
+
+breadth <- lmer(breadth ~ sd*enviornment + (1 | study_ID),
+                              data = fits_with_temps %>%
+                                filter(breadth_TF == TRUE))
+summary(breadth)
 ggsave("tolerance_var.pdf", plot = tolerance, path = here("figures"), width = 5, height = 4)
 
 #performance breadth should increase with var
@@ -557,7 +969,6 @@ summary(var_breadth_model)
 
 
 
-
 ## deutsch warming tolerance - the difference between ctmax and mean env. temp
 fits_with_temps <- fits_with_temps %>%
   mutate(warming_tolerance = ctmax - mean) %>%
@@ -566,24 +977,22 @@ fits_with_temps <- fits_with_temps %>%
 ##does how close your topt is to your env temp depend on latitude???? ### 
 fits_with_temps <- fits_with_temps %>%
   mutate(diff_max = q97.5 - topt) %>% 
-  mutate(diff_mean = mean - topt) 
+  mutate(diff_mean = topt - mean) 
 
-###topt should be closer to mean water temp in the tropics (ie mag should decrease with abs. latitude), where temps are higher (out of the tropics hyp)
-diff_mean <- ggplot(data = fits_with_temps %>%
+###topt should be closer to mean water temp in the tropics (ie mag should increase with abs. latitude), where temps are higher (out of the tropics hyp)
+thermal_saf <- ggplot(data = fits_with_temps %>%
          filter(topt_TF == TRUE),
-       aes(x = abs_latitude, y = diff_mean)) +
+       aes(x = abs_latitude, y = thermal_safety_margin_duetsch, color = enviornment)) +
   geom_abline(intercept = 0, slope = 0, color = "black", linetype = "dashed") +
   geom_point(alpha = 0.7) +
-  geom_smooth(method = stats::lm) +
-  # scale_color_manual(
-  #   name = "Environment",
-  #   values = c("marine" = "blue", "freshwater" = "lightgreen")
-  # ) +
+  scale_color_manual(
+  name = "Environment",
+  values = c("marine" = "blue", "freshwater" = "lightgreen")) +
   theme_classic()
 
-diff_mean
+thermal_saf
 
-model <- lme((topt-mean) ~ sd*enviornment,
+model <- lme((thermal_safety_margin_duetsch) ~ abs_latitude*enviornment,
                         data = fits_with_temps %>%
                           filter(topt_TF == TRUE),
                         random = ~ 1|study_ID)
@@ -610,7 +1019,6 @@ ggsave("diff_extreme.pdf", plot = diff_extreme, path = here("figures"), width = 
 warming_tol <- ggplot(data = fits_with_temps %>%
                          filter(thermal_max_TF == TRUE),
                        aes(x = abs_latitude, y = warming_tolerance, color = enviornment)) +
-  geom_abline(intercept = 0, slope = 1, color = "black", linetype = "dashed") +
   geom_point(alpha = 0.7) +
   geom_smooth(method = stats::lm) +
   labs(
@@ -638,7 +1046,63 @@ TSM <- ggplot(data = fits_with_temps %>%
   ) +
   theme_classic()
 TSM
-ggsave("TSM.pdf", plot = TSM, path = here("figures"), width = 5, height = 4)
+
+TSM <- lmer(thermal_safety_margin_duetsch ~ abs_latitude*enviornment + (1 | study_ID),
+            data = fits_with_temps %>%
+              filter(topt_TF == TRUE))
+summary(TSM)
+
+
+temp_range <- fits_with_temps %>%
+  filter(topt_TF == TRUE) %>%
+  group_by(enviornment) %>%
+  summarise(
+    min_lat_temp = min(abs_latitude),
+    max_lat_temp = max(abs_latitude))
+temp_range
+fresh_grid <- data.frame(
+  abs_latitude = seq(temp_range$min_lat_temp[temp_range$enviornment=="freshwater"],
+           temp_range$max_lat_temp[temp_range$enviornment=="freshwater"],
+           length.out = 200),
+  enviornment = "freshwater")
+marine_grid <- data.frame(
+  abs_latitude = seq(temp_range$min_lat_temp[temp_range$enviornment=="marine"],
+           temp_range$max_lat_temp[temp_range$enviornment=="marine"],
+           length.out = 200),
+  enviornment = "marine")
+
+pred_grid <- bind_rows(fresh_grid, marine_grid)
+pred_grid$pred <- predict(TSM, newdata = pred_grid, re.form = NA)
+pred_grid$se   <- predict(TSM, newdata = pred_grid, re.form = NA, se.fit = TRUE)$se.fit
+
+pred_grid$lower <- pred_grid$pred - 1.96 * pred_grid$se
+pred_grid$upper <- pred_grid$pred + 1.96 * pred_grid$se
+
+
+TSM_plot <- ggplot(data = pred_grid, aes(x = abs_latitude)) +
+  geom_point(data = fits_with_temps %>% filter(topt_TF == TRUE), aes(x = abs_latitude, y = thermal_safety_margin_duetsch, color = enviornment), alpha = .6) +
+  geom_line(aes(y = pred, color = enviornment)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = enviornment), alpha = 0.20) +
+  labs(x = "Latude", y = "Thermal Safety Margin (topt-mean)") +
+  scale_color_manual(
+    name = "Realm",
+    values = c("marine" = "blue", "freshwater" = "lightgreen")
+  ) +
+  scale_fill_manual(
+    name = "Realm",
+    values = c("marine" = "blue", "freshwater" = "lightgreen")
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none"
+  )
+TSM_plot
+
+
+
+
+
+ggsave("TSM_plot.pdf", plot = TSM_plot, path = here("figures"), width = 5, height = 4)
 
 
 
@@ -729,90 +1193,7 @@ summary(var_dif_mean_model)
 
 
 
-
-
-
-
-
-var_dif_mean_reg <- ggplot(data = fits_with_temps %>%
-                             filter(topt_TF == TRUE),
-                           aes(x = temp_sd, y = topt-temp_mean, color = enviornment)) +
-  geom_abline(intercept = 0, slope = -1, color = "black", linetype = "dashed") +
-  geom_point(alpha = 0.7) +
-  geom_smooth(method = stats::lm) +
-  labs(
-    x = "thermal variability (temp sd)",
-    y = "topt- mean") +
-  scale_color_manual(
-    name = "Environment",
-    values = c("marine" = "blue", "freshwater" = "lightgreen")
-  ) +
-  theme_classic()
-var_dif_mean_reg
-
-ggsave("var_dif_mean_reg.pdf", plot = var_dif_mean_reg, path = here("figures"), width = 5, height = 4)
-
-var_dif_max_reg <- ggplot(data = fits_with_temps %>%
-         filter(topt_TF == TRUE),
-       aes(x = temp_sd, y = diff_max, color = enviornment)) +
-  geom_abline(intercept = 0, slope = 1, color = "black", linetype = "dashed") +
-  geom_point(alpha = 0.7) +
-  geom_smooth(method = stats::lm) +
-  labs(
-    x = "thermal variability (temp sd)",
-    y = "extreme temp - topt") +
-  scale_color_manual(
-    name = "Environment",
-    values = c("marine" = "blue", "freshwater" = "lightgreen")
-  ) +
-  theme_classic()
-ggsave("var_dif_max_reg.pdf", plot = var_dif_max_reg, path = here("figures"), width = 5, height = 4)
-
-extreme_mean_box <- ggplot(fits_with_temps, aes(x = enviornment, y = q_high - temp_mean, color = enviornment)) +
-  geom_boxplot(alpha = 0.6, outlier.alpha = 0.4) +
-  scale_color_manual(
-    name = "Environment",
-    values = c("marine" = "blue", "freshwater" = "lightgreen")
-  ) +
-  labs(
-    x = "Enviornment", 
-    y = "Q-high - Mean Temp") + 
-  theme_classic()
-extreme_mean_box
-ggsave("extreme-mean-box.pdf", plot = extreme_mean_box, path = here("figures"), width = 5, height = 4)
-
-ggplot(data = fits_with_temps %>%
-                             filter(topt_TF == TRUE),
-                           aes(x = abs_latitude, y = temp_sd, color = enviornment)) +
-  geom_abline(intercept = 0, slope = -1, color = "black", linetype = "dashed") +
-  geom_point(alpha = 0.7) +
-  geom_smooth(method = stats::lm) +
-  labs(
-    x = "latitude",
-    y = "thermal variability") +
-  scale_color_manual(
-    name = "Environment",
-    values = c("marine" = "blue", "freshwater" = "lightgreen")
-  ) +
-  theme_classic()
-
-
-ggplot(data = fits_with_temps %>%
-         filter(topt_TF == TRUE),
-       aes(x = abs_latitude, y = temp_sd, color = enviornment)) +
-  geom_abline(intercept = 0, slope = -1, color = "black", linetype = "dashed") +
-  geom_point(alpha = 0.7) +
-  geom_smooth(method = stats::lm) +
-  labs(
-    x = "latitude",
-    y = "thermal variability") +
-  scale_color_manual(
-    name = "Environment",
-    values = c("marine" = "blue", "freshwater" = "lightgreen")
-  ) +
-  theme_classic()
-
-
+### thermal extremes with latitude ###
 ggplot(data = fits_with_temps) +
   geom_point(aes(x = abs_latitude, y = q_low, color = enviornment)) +
   geom_point(aes(x = abs_latitude, y = q_high, color = enviornment), shape = 2)+
@@ -825,14 +1206,6 @@ ggplot(data = fits_with_temps) +
   ) +
   theme_classic()
 
-
-
-
-
-
-
-
-#### dumping ####
 
 ## what about response type
 # response types # 
