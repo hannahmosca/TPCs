@@ -244,8 +244,8 @@ curves <- curves %>%
   rename(given_trait_name = new.name)
 
 curves_new <- curves %>%
-  left_join(response_ontology %>% select(Trait.Group, given_trait_name, Trait.motivation), join_by(given_trait_name)) %>%
-  select(curve_ID, response_type, given_trait_name, Trait.Group, Trait.motivation, everything())
+  left_join(response_ontology %>% select(Trait.Group, given_trait_name, Trait.motivation, organization), join_by(given_trait_name)) %>%
+  select(curve_ID, response_type, given_trait_name, Trait.Group, Trait.motivation, organization, everything())
 
 
 ####handle survival and mortality curves in this script #### 
